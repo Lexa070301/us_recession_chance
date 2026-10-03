@@ -53,15 +53,24 @@ function histLine(signal: SignalDef, locale: string): string | null {
 }
 
 export function compositeLine(composite: CompositeResult, locale: string): string {
-  const base = t(locale, "composite.line", {
+  const activeCount = Object.values(composite.detail).filter((d) => d.state !== "ok").length;
+  const scoreLine = t(locale, "composite.line", {
     score: composite.score.toFixed(1),
     bucket: t(locale, `bucket.${composite.bucket}`),
     prob: composite.probLabel,
+    active: t(locale, "composite.active_count", { count: activeCount }),
   });
-  if (composite.modelProb !== null && composite.modelProb !== undefined) {
-    return `${base}\n${t(locale, "composite.model_prob", { prob: probBucketLabel(composite.modelProb) })}`;
+  const p = composite.modelProb;
+  if (p === null || p === undefined) return scoreLine;
+
+  // Model probability is the headline number; the score line explains the basis.
+  const lines = [t(locale, "composite.model_prob", { prob: probBucketLabel(p) }), scoreLine];
+  if (composite.bucket === "low" && p >= 0.25) {
+    lines.push(t(locale, "composite.divergence_model"));
+  } else if (composite.bucket !== "low" && p < 0.1) {
+    lines.push(t(locale, "composite.divergence_signals"));
   }
-  return base;
+  return lines.join("\n");
 }
 
 export function renderSignalEvent(

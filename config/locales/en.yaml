@@ -27,8 +27,12 @@ event:
 
 composite:
   title: "📊 Composite 12-month recession risk"
-  line: "Score {{score}} → {{bucket}} ({{prob}})"
   model_prob: "Model estimate (12m): {{prob}} — pooled logit, fitted on 1983–2025"
+  line: "Signal score: {{score}} → {{bucket}} ({{prob}}) · {{active}}"
+  active_count_one: "1 active signal"
+  active_count_other: "{{count}} active signals"
+  divergence_model: "⚖️ Model reads more risk than the binary signals show yet — the backdrop can worsen before thresholds trip."
+  divergence_signals: "⚖️ Signals are triggered, but the macro model reads a weaker backdrop — treat an elevated score with care."
   base: "Unconditional base rate: {{base}}"
   nowcast_title: "⏱ Nowcast (already in recession?)"
   footer: "Informational data only — not investment advice."
