@@ -34,6 +34,10 @@ export async function cmdStart(ctx: Context): Promise<void> {
   await ctx.reply(t(locale(ctx), "bot.start"));
 }
 
+export async function cmdGuide(ctx: Context): Promise<void> {
+  await ctx.reply(t(locale(ctx), "bot.guide"));
+}
+
 export async function cmdStatus(ctx: Context): Promise<void> {
   const states = getAllSignalStates();
   const composite = computeComposite(

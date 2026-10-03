@@ -4,6 +4,7 @@ import { upsertUser } from "../data/repositories/users.js";
 import {
   cmdAnalytics,
   cmdDigest,
+  cmdGuide,
   cmdLang,
   cmdPaySupport,
   cmdPlan,
@@ -41,6 +42,7 @@ export function createBot(): Bot {
 
   bot.command("start", cmdStart);
   bot.command("status", cmdStatus);
+  bot.command("guide", cmdGuide);
   bot.command("settings", cmdSettings);
   bot.command("lang", cmdLang);
   bot.command("signals", cmdSignals);

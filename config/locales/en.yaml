@@ -61,6 +61,7 @@ bot:
     I track leading US recession indicators (yield curve, credit spreads, labor market, housing) and alert you when they change state.
 
     /status — current signals & composite risk
+    /guide — detailed guide to terms & calculations
     /signals — choose which signals to follow
     /settings — alerts, language, delivery
     /analytics — per-signal statistics
@@ -71,6 +72,36 @@ bot:
 
     ⚠️ Informational and educational data only — not investment advice. Historical frequencies do not guarantee future results.
   disclaimer_short: "Informational data only — not investment advice."
+  guide: |
+    📖 Guide — how this works
+
+    🔹 Data
+    US macro indicators from FRED (St. Louis Fed), updated on release schedules. Recession dating follows the NBER chronology.
+
+    🔹 Signals & states
+    Each indicator is compared against historically meaningful thresholds:
+    • ok — outside the risk zone
+    • watch — early deterioration
+    • warning — a level historically followed by recessions more often
+    • critical — deep deterioration
+    A state change = an event. "Historical accuracy" = the share of the signal's episodes after which a recession began within 12 months (n = episode count). "Limited history" = the series covers fewer than ~5 recessions, so stats are unreliable.
+
+    🔹 Composite score
+    score = Σ (signal weight × state multiplier)
+    Multipliers: watch 0.5 · warning 1.0 · critical 1.5
+    Buckets: <5 — LOW (<15%) · 5–9 — ELEVATED (≈35–60%) · 9–13 — HIGH (≈40–65%) · ≥13 — SYSTEMIC (historically rare). Probabilities are backtest-calibrated on 1967–2026.
+
+    🔹 Model estimate
+    A pooled logit fitted on 1983–2025: probability of a recession STARTING within 12 months. Predictors: 10Y–3M spread, NFCI, CFNAI-MA3, jobless claims YoY, building permits YoY, 3-month unemployment change. This is the headline number; the score is supporting context. Unconditional base rate ~16%.
+
+    🔹 Nowcast vs forecast
+    Forecast signals answer "will a recession come within 12m". Nowcast signals (Sahm rule, Chauvet–Piger) answer "has one already started" — they confirm onset with almost no lead and are shown in a separate section.
+
+    🔹 Plans
+    Free: daily + weekly digest.
+    Plus: instant transition & nowcast alerts, watch-level signals, signal selection, custom score threshold, /analytics, custom digest time, digest toggles — /plan.
+
+    ⚠️ Informational data only — not investment advice. Historical frequencies do not guarantee future results.
   status_empty: "No active warning signals."
   settings_title: "⚙️ Settings"
   settings_delivery: "Delivery mode"
@@ -114,6 +145,8 @@ bot:
     • Price: per the selected plan, shown before payment. Manual renewal — no auto-charges.
     • Refunds: full refund within {{refund_days}} days of payment via /paysupport. A refund deducts the purchased period from your remaining Plus time (Plus is canceled when none remains).
     • Availability depends on external data (FRED) and Telegram — no uptime guarantee.
+    • Accuracy: data, models and calculations may contain errors and delays — the service is provided "as is", without warranties of accuracy, completeness or timeliness.
+    • Liability: the developer is not liable for decisions or losses (direct or indirect) arising from use of, or inability to use, the service. Maximum liability is limited to the price of the paid period.
     • Telegram is not a party to this purchase; Telegram support cannot help with payments in this bot.
   terms_consent: "By paying you agree to the Terms — /terms"
   pay_agree: "✅ Agree & pay {{stars}}⭐"
