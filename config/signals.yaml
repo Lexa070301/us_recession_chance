@@ -28,7 +28,7 @@ signals:
           exit_periods: 5,
         }
     hist:
-      sample: "1982–2026 (T10Y3M series; measured 2026-10)"
+      sample: "1982–2026, T10Y3M series; measured 2026-10"
       episodes: 5
       recessions_covered: 4
       precision: 0.40
@@ -51,7 +51,7 @@ signals:
           exit_periods: 5,
         }
     hist:
-      sample: "1976–2026 (measured 2026-10)"
+      sample: "1976–2026, measured 2026-10"
       episodes: 6
       recessions_covered: 6
       precision: 0.0
@@ -82,7 +82,7 @@ signals:
           - { state: warning, op: ">", threshold: 30 }
         exit_below: 25
     hist:
-      sample: "1982–2026 (measured 2026-10)"
+      sample: "1982–2026, measured 2026-10"
       episodes: 5
       recessions_covered: 4
       precision: 0.4
@@ -103,7 +103,7 @@ signals:
           - { state: watch, op: ">", threshold: 0.0 }
         exit_below: -0.1
     hist:
-      sample: "1971–2026 (measured 2026-10)"
+      sample: "1971–2026, measured 2026-10"
       recessions_covered: 7
       precision: 0.25
       recall: 1.0
@@ -123,7 +123,7 @@ signals:
           - { state: watch, op: ">", threshold: 0.0 }
         exit_below: -0.1
     hist:
-      sample: "1994–2026 (measured 2026-10)"
+      sample: "1994–2026, measured 2026-10"
       insufficient_history: true
       recessions_covered: 3
       precision: 0.18
@@ -190,7 +190,7 @@ signals:
           - { state: watch, op: ">", threshold: 0 }
         exit_below: -5
     hist:
-      sample: "1990–2026 (quarterly, measured 2026-10)"
+      sample: "1990–2026, quarterly, measured 2026-10"
       recessions_covered: 4
       insufficient_history: true
       precision: 0.4
@@ -209,7 +209,7 @@ signals:
       type: yoy
       params: { op: "<", threshold: 0, warn: 3, critical: -10 }
     hist:
-      sample: "1966–2026 (measured 2026-10)"
+      sample: "1966–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.11
       recall: 1.0
@@ -224,7 +224,7 @@ signals:
       type: yoy
       params: { op: "<", threshold: -10, warn: 2 }
     hist:
-      sample: "1966–2026 (measured 2026-10)"
+      sample: "1966–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.18
       recall: 1.0
@@ -260,7 +260,7 @@ signals:
           input: { key: icsa, transform: ma4 }
           params: { window: 52, rise_pct: 15, critical_pct: 25 }
     hist:
-      sample: "1967–2026 (measured 2026-10)"
+      sample: "1967–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.2
       recall: 1.0
@@ -275,7 +275,7 @@ signals:
       type: rise_from_trough
       params: { window: 104, rise_pct: 10, critical_pct: 20 }
     hist:
-      sample: "1967–2026 (measured 2026-10)"
+      sample: "1967–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.35
       recall: 1.0
@@ -327,7 +327,7 @@ signals:
           - { state: watch, op: "<", threshold: -0.35 }
         exit_above: -0.2
     hist:
-      sample: "1967–2026 (measured 2026-10)"
+      sample: "1967–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.17
       recall: 0.38
@@ -342,7 +342,7 @@ signals:
       type: yoy
       params: { op: "<", threshold: 0, warn: 2 }
     hist:
-      sample: "1966–2026 (measured 2026-10)"
+      sample: "1966–2026, measured 2026-10"
       recessions_covered: 8
       precision: 0.18
       recall: 0.5
@@ -363,7 +363,7 @@ signals:
           - { state: critical, op: ">=", threshold: 0.5 }
         exit_below: 0.4
     hist:
-      sample: "1949–2026 (measured window [-3,+6]m around start)"
+      sample: "1949–2026, measured window [-3,+6]m around start"
       episodes: 10
       recessions_covered: 8
       recall: 1.0
