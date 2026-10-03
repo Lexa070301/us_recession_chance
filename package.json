@@ -1,0 +1,34 @@
+{
+  "name": "us-recession-chance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "US recession signal monitor: FRED data collection, signal engine, composite risk score, multichannel localized alerts (Telegram)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "dotenv": "^17.2.3",
+    "grammy": "^1.38.4",
+    "i18next": "^25.6.0",
+    "node-cron": "^4.2.1",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.7.0",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
