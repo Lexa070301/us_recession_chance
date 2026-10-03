@@ -2,6 +2,24 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 8: message layout v2)
+
+### Changed
+
+- Verdict-first layouts: every message starts with
+  `📊 Риск рецессии: <bucket>` + one compact `Model/score/active` line.
+- Digest: events carry values (`⚠️ Заявки → 245k`), active signals are
+  collapsed to one `▸ Активные (n): …` line (top 5 by severity + `…+n`),
+  nowcast is a single `⏱ Nowcast: ✅ спокойно`/items line. Disclaimer
+  dropped from digest/status (kept in instant alerts, /start, /terms).
+- Instant alert: `value · from→to since <date>` one-liner, hist line,
+  one-line risk summary — description and the 3-line composite removed.
+- Threshold alert: 2 lines instead of duplicated composite block.
+- /analytics: sorted by severity, OK signals collapsed
+  (`✅ Остальные N — норма` / `✅ Все — норма`).
+- Units now render with short localized suffixes
+  (`-0.42 п.п.`, `245k`, `1.4 млн`).
+
 ## 2026-10-05 (implementation pass 7: multi-tier plans)
 
 ### Implemented

@@ -16,6 +16,13 @@ const STATE_ICON: Record<SignalState, string> = {
   critical: "🚨",
 };
 
+const SEVERITY_RANK: Record<SignalState, number> = {
+  ok: 0,
+  watch: 1,
+  warning: 2,
+  critical: 3,
+};
+
 const UNITS_WITH_DECIMALS = new Set(["percent", "pct_points", "index", "ratio", "binary"]);
 
 export function formatValue(value: number | null, unit?: string): string {
@@ -25,9 +32,24 @@ export function formatValue(value: number | null, unit?: string): string {
   return Math.round(value).toLocaleString("en-US");
 }
 
-function transitionLabel(from: SignalState, to: SignalState, locale: string): string {
-  const toLabel = to === "ok" ? t(locale, "state_change.cleared") : t(locale, `severity.${to}`);
-  return `${t(locale, `severity.${from}`)} → ${toLabel}`;
+/** Short localized unit suffix: "−0.42 п.п.", "4.2%", "245k". */
+function formatWithUnit(value: number | null, unit: string | undefined, locale: string): string {
+  if (value === null || value === undefined) return "N/A";
+  if (unit === "persons") {
+    return value >= 1000 ? `${Math.round(value / 1000)}k` : String(Math.round(value));
+  }
+  if (unit === "thousands" || unit === "thousands_saar") {
+    return value >= 1000
+      ? `${(value / 1000).toFixed(1)}${t(locale, "unit.mln")}`
+      : `${Math.round(value)}k`;
+  }
+  if (!unit) return formatValue(value, unit);
+  const suffix = t(locale, `unit.${unit}`);
+  return formatValue(value, unit) + (suffix === `unit.${unit}` ? "" : suffix);
+}
+
+function stateLabel(state: SignalState, locale: string): string {
+  return t(locale, `severity.${state}`);
 }
 
 function histLine(signal: SignalDef, locale: string): string | null {
@@ -52,25 +74,81 @@ function histLine(signal: SignalDef, locale: string): string | null {
   return null;
 }
 
-export function compositeLine(composite: CompositeResult, locale: string): string {
-  const activeCount = Object.values(composite.detail).filter((d) => d.state !== "ok").length;
-  const scoreLine = t(locale, "composite.line", {
-    score: composite.score.toFixed(1),
-    bucket: t(locale, `bucket.${composite.bucket}`),
-    prob: composite.probLabel,
-    active: t(locale, "composite.active_count", { count: activeCount }),
-  });
-  const p = composite.modelProb;
-  if (p === null || p === undefined) return scoreLine;
+function activeCount(composite: CompositeResult): number {
+  return Object.values(composite.detail).filter((d) => d.state !== "ok").length;
+}
 
-  // Model probability is the headline number; the score line explains the basis.
-  const lines = [t(locale, "composite.model_prob", { prob: probBucketLabel(p) }), scoreLine];
-  if (composite.bucket === "low" && p >= 0.25) {
-    lines.push(t(locale, "composite.divergence_model"));
-  } else if (composite.bucket !== "low" && p < 0.1) {
-    lines.push(t(locale, "composite.divergence_signals"));
+/** "📊 Риск рецессии: НИЗКИЙ" — the headline verdict. */
+function headline(composite: CompositeResult, locale: string): string {
+  return t(locale, "composite.headline", { bucket: t(locale, `bucket.${composite.bucket}`) });
+}
+
+/** "Модель: <10% за 12 мес · скор 1.0" (+ divergence note on next line). */
+function modelScoreLines(composite: CompositeResult, locale: string): string[] {
+  const score = composite.score.toFixed(1);
+  const p = composite.modelProb;
+  const lines = [
+    p === null || p === undefined
+      ? t(locale, "composite.risk_score", { score, prob: composite.probLabel })
+      : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score }),
+  ];
+  if (p !== null && p !== undefined) {
+    if (composite.bucket === "low" && p >= 0.25) {
+      lines.push(t(locale, "composite.divergence_model"));
+    } else if (composite.bucket !== "low" && p < 0.1) {
+      lines.push(t(locale, "composite.divergence_signals"));
+    }
   }
-  return lines.join("\n");
+  return lines;
+}
+
+function signalName(key: string, locale: string): string {
+  const def = getSignalDef(key);
+  return def ? t(locale, `signal.${def.key}.name`) : key;
+}
+
+function signalUnit(key: string): string | undefined {
+  const def = getSignalDef(key);
+  return def ? getSeriesDef(def.input.key)?.unit : undefined;
+}
+
+function splitByBlock(states: SignalStateRow[]): {
+  forecast: SignalStateRow[];
+  nowcast: SignalStateRow[];
+} {
+  const forecast: SignalStateRow[] = [];
+  const nowcast: SignalStateRow[] = [];
+  for (const s of states.filter((s) => s.state !== "ok")) {
+    (getSignalDef(s.signal_key)?.block === "nowcast" ? nowcast : forecast).push(s);
+  }
+  return { forecast, nowcast };
+}
+
+/** "⏱ Nowcast: ✅ спокойно" or "⏱ Nowcast: 🚨 Правило Сэм 0.63". */
+function nowcastLine(nowcast: SignalStateRow[], locale: string): string {
+  const status =
+    nowcast.length === 0
+      ? t(locale, "composite.nowcast_calm")
+      : nowcast
+          .map((s) => `${STATE_ICON[s.state]} ${signalName(s.signal_key, locale)}`)
+          .join(" · ");
+  return t(locale, "composite.nowcast", { status });
+}
+
+/** Compact active list: top 5 by severity, "🚨 Инверсия −0.42 · …+2". */
+function compactList(states: SignalStateRow[], locale: string, max = 5): string {
+  const sorted = [...states].sort(
+    (a, b) => SEVERITY_RANK[b.state] - SEVERITY_RANK[a.state],
+  );
+  const items = sorted.slice(0, max).map((s) => {
+    const v =
+      s.last_value === null || s.last_value === undefined
+        ? ""
+        : ` ${formatWithUnit(s.last_value, signalUnit(s.signal_key), locale)}`;
+    return `${STATE_ICON[s.state]} ${signalName(s.signal_key, locale)}${v}`;
+  });
+  const rest = sorted.length - items.length;
+  return rest > 0 ? `${items.join(" · ")} …+${rest}` : items.join(" · ");
 }
 
 export function renderSignalEvent(
@@ -79,30 +157,47 @@ export function renderSignalEvent(
   locale: string,
 ): string {
   const signal = getSignalDef(event.signal_key);
-  const name = signal ? t(locale, `signal.${signal.key}.name`) : event.signal_key;
-  const desc = signal ? t(locale, `signal.${signal.key}.desc`) : "";
-  const unit = signal ? getSeriesDef(signal.input.key)?.unit : undefined;
+  const name = signalName(event.signal_key, locale);
+  const unit = signalUnit(event.signal_key);
+
+  const toLabel = stateLabel(event.to_state, locale);
+  const statePart =
+    event.from_state !== "ok" && event.to_state !== "ok"
+      ? `${stateLabel(event.from_state, locale)} → ${toLabel}`
+      : event.to_state === "ok"
+        ? t(locale, "state_change.cleared")
+        : toLabel;
 
   const lines: string[] = [
     t(locale, "event.title", { icon: STATE_ICON[event.to_state], name }),
-    t(locale, "event.transition", {
-      label: transitionLabel(event.from_state, event.to_state, locale),
-    }),
-    t(locale, "event.value", { value: formatValue(event.value, unit) }),
   ];
 
+  let valueLine = `${formatWithUnit(event.value, unit, locale)} · ${statePart}`;
   const ctx = event.payload_json ? (JSON.parse(event.payload_json) as Record<string, unknown>) : {};
   const since = (ctx.since as string) ?? null;
   if (event.to_state !== "ok" && since) {
-    lines.push(t(locale, "event.since", { since }));
+    valueLine += ` ${t(locale, "event.since", { since })}`;
   }
-  if (desc) lines.push(desc);
+  lines.push(valueLine);
+
   if (signal) {
     const hist = histLine(signal, locale);
-    if (hist) lines.push(`_${hist}_`);
+    if (hist) lines.push(hist);
   }
   if (composite) {
-    lines.push("", t(locale, "composite.title"), compositeLine(composite, locale));
+    const p = composite.modelProb;
+    lines.push(
+      p === null || p === undefined
+        ? t(locale, "composite.event_risk_nomodel", {
+            bucket: t(locale, `bucket.${composite.bucket}`),
+            score: composite.score.toFixed(1),
+          })
+        : t(locale, "composite.event_risk", {
+            bucket: t(locale, `bucket.${composite.bucket}`),
+            prob: probBucketLabel(p),
+            score: composite.score.toFixed(1),
+          }),
+    );
   }
   lines.push("", t(locale, "bot.disclaimer_short"));
   return lines.join("\n");
@@ -113,42 +208,24 @@ export function renderStatus(
   composite: CompositeResult,
   locale: string,
 ): string {
-  const cfg = getConfig();
-  const lines: string[] = [t(locale, "composite.title"), compositeLine(composite, locale), ""];
+  const { forecast, nowcast } = splitByBlock(states);
+  const lines: string[] = [headline(composite, locale), ...modelScoreLines(composite, locale)];
 
-  const active = states.filter((s) => s.state !== "ok");
-  const nowcast = states.filter((s) => {
-    const def = getSignalDef(s.signal_key);
-    return def?.block === "nowcast" && s.state !== "ok";
-  });
-
-  const nonNowcast = active.filter(
-    (s) => getSignalDef(s.signal_key)?.block !== "nowcast",
-  );
-
-  if (nonNowcast.length === 0) {
-    lines.push(t(locale, "bot.status_empty"));
+  if (forecast.length === 0) {
+    lines.push("", t(locale, "bot.status_empty"));
   } else {
-    lines.push(t(locale, "digest.section_active"));
-    for (const s of nonNowcast) {
-      const def = getSignalDef(s.signal_key);
-      const name = def ? t(locale, `signal.${def.key}.name`) : s.signal_key;
-      const unit = def ? getSeriesDef(def.input.key)?.unit : undefined;
-      lines.push(`${STATE_ICON[s.state]} ${name} — ${formatValue(s.last_value, unit)}`);
+    lines.push("");
+    for (const s of [...forecast].sort(
+      (a, b) => SEVERITY_RANK[b.state] - SEVERITY_RANK[a.state],
+    )) {
+      const unit = signalUnit(s.signal_key);
+      lines.push(
+        `${STATE_ICON[s.state]} ${signalName(s.signal_key, locale)} — ${formatWithUnit(s.last_value, unit, locale)}`,
+      );
     }
   }
 
-  if (nowcast.length) {
-    lines.push("", t(locale, "composite.nowcast_title"));
-    for (const s of nowcast) {
-      const def = getSignalDef(s.signal_key);
-      const name = def ? t(locale, `signal.${def.key}.name`) : s.signal_key;
-      lines.push(`${STATE_ICON[s.state]} ${name}`);
-    }
-  }
-
-  lines.push("", t(locale, "bot.disclaimer_short"));
-  void cfg;
+  lines.push("", nowcastLine(nowcast, locale));
   return lines.join("\n");
 }
 
@@ -162,37 +239,44 @@ export function renderDigest(
   botPromo?: string,
 ): string {
   const titleKey = kind === "weekly" ? "digest.title_weekly" : "digest.title";
-  const eventsKey = kind === "weekly" ? "digest.section_events_weekly" : "digest.section_events";
-  const lines: string[] = [t(locale, titleKey, { date }), ""];
+  const { forecast, nowcast } = splitByBlock(states);
 
-  if (events.length) {
-    lines.push(t(locale, eventsKey));
-    for (const ev of events) {
-      const def = getSignalDef(ev.signal_key);
-      const name = def ? t(locale, `signal.${def.key}.name`) : ev.signal_key;
+  const lines: string[] = [t(locale, titleKey, { date }), "", headline(composite, locale)];
+
+  if (events.length === 0 && forecast.length === 0) {
+    lines.push(
+      ...modelScoreLines(composite, locale).map(
+        (l, i) => (i === 0 ? `${l} · ${t(locale, "digest.quiet")}` : l),
+      ),
+    );
+  } else {
+    const first = modelScoreLines(composite, locale);
+    first[0] += ` · ${t(locale, "composite.active_count", { count: activeCount(composite) })}`;
+    lines.push(...first);
+
+    if (events.length) {
+      const eventsKey = kind === "weekly" ? "digest.events_weekly" : "digest.events";
+      lines.push("", t(locale, eventsKey));
+      for (const ev of events) {
+        const unit = signalUnit(ev.signal_key);
+        lines.push(
+          `${STATE_ICON[ev.to_state]} ${signalName(ev.signal_key, locale)} → ${formatWithUnit(ev.value, unit, locale)}`,
+        );
+      }
+    }
+
+    if (forecast.length) {
       lines.push(
-        `${STATE_ICON[ev.to_state]} ${name} — ${transitionLabel(ev.from_state, ev.to_state, locale)}`,
+        "",
+        t(locale, "digest.active_compact", {
+          count: forecast.length,
+          list: compactList(forecast, locale),
+        }),
       );
     }
-    lines.push("");
   }
 
-  const active = states.filter(
-    (s) => s.state !== "ok" && getSignalDef(s.signal_key)?.block !== "nowcast",
-  );
-  if (active.length) {
-    lines.push(t(locale, "digest.section_active"));
-    for (const s of active) {
-      const def = getSignalDef(s.signal_key);
-      const name = def ? t(locale, `signal.${def.key}.name`) : s.signal_key;
-      const unit = def ? getSeriesDef(def.input.key)?.unit : undefined;
-      lines.push(`${STATE_ICON[s.state]} ${name} — ${formatValue(s.last_value, unit)}`);
-    }
-    lines.push("");
-  }
-
-  lines.push(t(locale, "composite.title"), compositeLine(composite, locale));
-  lines.push("", t(locale, "bot.disclaimer_short"));
+  lines.push("", nowcastLine(nowcast, locale));
   if (botPromo) lines.push("", t(locale, "digest.bot_promo", { bot: botPromo }));
   return lines.join("\n");
 }
@@ -203,16 +287,24 @@ export function renderCompositeAlert(
   threshold: number,
   locale: string,
 ): string {
+  const p = composite.modelProb;
+  const risk =
+    p === null || p === undefined
+      ? t(locale, "composite.alert_risk_nomodel", {
+          bucket: t(locale, `bucket.${composite.bucket}`),
+          active: t(locale, "composite.active_count", { count: activeCount(composite) }),
+        })
+      : t(locale, "composite.alert_risk", {
+          bucket: t(locale, `bucket.${composite.bucket}`),
+          prob: probBucketLabel(p),
+          active: t(locale, "composite.active_count", { count: activeCount(composite) }),
+        });
   return [
     t(locale, "composite.threshold_alert", {
       threshold,
       score: composite.score.toFixed(1),
-      bucket: t(locale, `bucket.${composite.bucket}`),
-      prob: composite.probLabel,
     }),
-    compositeLine(composite, locale),
-    "",
-    t(locale, "bot.disclaimer_short"),
+    risk,
   ].join("\n");
 }
 
@@ -223,14 +315,24 @@ export function renderAnalytics(states: SignalStateRow[], locale: string): strin
 
   const block = (label: string, defs: SignalDef[]) => {
     if (!defs.length) return;
+    const sorted = [...defs].sort(
+      (a, b) =>
+        SEVERITY_RANK[byKey.get(b.key)?.state ?? "ok"] -
+        SEVERITY_RANK[byKey.get(a.key)?.state ?? "ok"],
+    );
+    let okCount = 0;
     lines.push(label);
-    for (const def of defs) {
+    for (const def of sorted) {
       const st = byKey.get(def.key);
       const state = st?.state ?? "ok";
+      if (state === "ok") {
+        okCount++;
+        continue;
+      }
       const unit = getSeriesDef(def.input.key)?.unit;
       let line = `${STATE_ICON[state]} ${t(locale, `signal.${def.key}.name`)} — ${t(locale, `severity.${state}`)}`;
       if (st?.last_value !== null && st?.last_value !== undefined) {
-        line += ` · ${formatValue(st.last_value, unit)}`;
+        line += ` · ${formatWithUnit(st.last_value, unit, locale)}`;
       }
       const h = def.hist;
       if (h?.precision !== undefined && h.episodes !== undefined) {
@@ -242,6 +344,11 @@ export function renderAnalytics(states: SignalStateRow[], locale: string): strin
         line += ` — ${t(locale, "analytics.insufficient")}`;
       }
       lines.push(line);
+    }
+    if (okCount === defs.length) {
+      lines.push(t(locale, "analytics.all_ok"));
+    } else if (okCount) {
+      lines.push(t(locale, "analytics.rest_ok", { count: okCount }));
     }
     lines.push("");
   };
