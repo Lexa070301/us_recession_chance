@@ -14,8 +14,9 @@ on:
     - cron: "35 15 2,7,12,17,22,27 * *" # monthly/quarterly release days
   workflow_dispatch:
 
+# checkout needs contents: read (private repo -> "not found" without it)
 permissions:
-  contents: none
+  contents: read
 
 jobs:
   run:
