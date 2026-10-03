@@ -4,6 +4,8 @@ import { jobFetch } from "./fetch.js";
 import { jobCheckSignals } from "./checkSignals.js";
 import { jobDigest } from "./digest.js";
 import { jobExpireSubscriptions } from "./subscriptions.js";
+import { jobHealthcheck } from "./health.js";
+import { jobBackup } from "./backup.js";
 import { processDeliveries } from "../publish/publisher.js";
 
 const wrap = (name: string, fn: () => Promise<void>) => async () => {
@@ -48,6 +50,12 @@ export function startScheduler(): void {
 
   // Subscription expiry — hourly
   cron.schedule("5 * * * *", wrap("subs", jobExpireSubscriptions), { timezone: tz });
+
+  // Healthcheck — daily 06:00 (DMs admin on issues)
+  cron.schedule("0 6 * * *", wrap("health", jobHealthcheck), { timezone: tz });
+
+  // SQLite backup — Sunday 03:30, keeps last 14
+  cron.schedule("30 3 * * 0", wrap("backup", async () => { await jobBackup(); }), { timezone: tz });
 
   console.log(`Scheduler started (tz=${tz})`);
 }

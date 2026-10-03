@@ -33,21 +33,19 @@ export async function jobDigest(): Promise<void> {
 
   let enqueued = 0;
   for (const ch of getChannelTargets()) {
-    enqueueDelivery(
+    enqueued += enqueueDelivery(
       { digestKey: today, targetType: "channel", targetId: ch.chatId, locale: ch.locale, payloadText: texts.get(ch.locale)! },
       db,
-    );
-    enqueued++;
+    ) ? 1 : 0;
   }
   for (const user of listActiveUsers(db)) {
     const prefs = getPrefs(user.tg_user_id, db);
     if (prefs.delivery_mode !== "digest") continue;
     const loc = user.locale;
-    enqueueDelivery(
+    enqueued += enqueueDelivery(
       { digestKey: today, targetType: "dm", targetId: String(user.tg_user_id), locale: loc, payloadText: texts.get(loc) ?? texts.get(cfg.channels.defaults.fallback_locale)! },
       db,
-    );
-    enqueued++;
+    ) ? 1 : 0;
   }
 
   const res = await processDeliveries(db);

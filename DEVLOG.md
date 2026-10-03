@@ -2,6 +2,44 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-03 (implementation pass 2: Phase 5 + ops)
+
+### Implemented
+
+- **Backtest layer** (`src/backtest/`):
+  - `replay.ts` — SeriesCache (shared transformed inputs), publication-lag
+    aware replay (`PUBLISH_LAG_DAYS`: daily 1 / weekly 7 / monthly 45 /
+    quarterly 90), `stateAt`, `detectEpisodes` (merge runs <6 months apart).
+  - `stats.ts` — per-signal precision/recall/median-lead vs NBER starts,
+    censoring of episodes near sample end; monthly composite-score grid
+    (recession months excluded = transition probability) + band calibration.
+  - `logit.ts` — IRLS logistic regression (standardized predictors, ridge),
+    reliability table, McFadden R². No external deps.
+- **Scripts**: `npm run backtest` (signal stats vs static `hist:` + score
+  bands) and `npm run fit-model` (6 predictors, one per block; prints
+  coefs + YAML block for `pooled_logit` in model.yaml — schema added,
+  not wired into runtime yet).
+- **Ops**: digest dedup via partial unique index (migration 0002,
+  `ON CONFLICT DO NOTHING`); `jobs/health.ts` (stale fetches per freq,
+  delivery backlog/dead, composite heartbeat → `ADMIN_TG_ID` DM);
+  `jobs/backup.ts` (better-sqlite3 `.backup()`, 14-file rotation);
+  cron entries for both; `ecosystem.config.cjs` for pm2; README
+  commands/scheduling/deployment sections.
+
+### Caveats
+
+- Backtest uses latest-vintage data → revisions leak a little; publish lags
+  are approximations. True ALFRED-vintage mode remains a Phase 5 follow-up.
+- fit-model output must be reviewed (OOS, reliability) before wiring
+  `pooled_logit` into scoring — intentionally a manual step.
+
+### TODO / known gaps
+
+- ALFRED vintage-aware backtest; wire calibrated bands/model into score.
+- Stars e2e in Telegram test env; recurring invoices.
+- Release-calendar-aware refetch; GitHub Actions channel-only mode;
+  X adapter.
+
 ## 2026-10-03 (implementation pass 1)
 
 ### Implemented (PLAN.md Phases 1–4 done, 5–7 partial)

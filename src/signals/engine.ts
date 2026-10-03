@@ -15,7 +15,7 @@ import { Panel } from "../metrics/panel.js";
 import { evaluate } from "./evaluators.js";
 import { computeComposite, type CompositeResult } from "./score.js";
 
-const YOY_PERIODS: Record<Frequency, number> = {
+export const YOY_PERIODS: Record<Frequency, number> = {
   daily: 252,
   weekly: 52,
   monthly: 12,

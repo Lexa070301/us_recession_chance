@@ -294,12 +294,16 @@ desc / hist / composite / disclaimer`.
 
 - [x] `scripts/histStats.md` + `hist:`-блоки в signals.yaml (precision/recall,
       episodes, insufficient_history для рядов с <5 рецессий).
-- [ ] `scripts/backtest.ts`: на ALFRED-винтажах (без look-ahead): эпизоды
-      сигналов vs NBER-старт, калибровка score→prob (доля рецессий за 12м по
-      бакетам скора).
-- [ ] `scripts/fitModel.ts`: pooled logit на 3–6 предикторах (по одному из
-      блока) → коэффициенты в `config/model.yaml`; модель считает
-      P(вход в рецессию | сейчас не в рецессии).
+- [x] `scripts/backtest.ts` + `src/backtest/`: replay сигналов с учётом
+      лагов публикаций (PUBLISH_LAG_DAYS per freq), эпизоды (слияние <6м),
+      precision/recall/median lead vs NBER-старты, калибровка score→prob
+      по бакетам. ⚠ пока на latest-vintage данных (ревизии дают лёгкий
+      look-ahead); полноценный ALFRED-vintage режим — следующий шаг.
+- [x] `scripts/fitModel.ts` + `src/backtest/logit.ts`: pooled logit (IRLS,
+      без зависимостей) на 6 предикторах по одному из блока; предсказывает
+      P(вход в рецессию | сейчас не в рецессии), recession-месяцы исключены;
+      выводит коэффициенты + reliability-таблицу + YAML-блок для model.yaml
+      (схема `pooled_logit` добавлена, в рантайм пока не подключено).
 - [x] Отображение: бакеты (`<15%` / `15–35%` / `35–60%` / `>60%`) — без
       псевдоточных процентов (model.yaml).
 - [x] Nowcast-блок отдельно: `sahm_rule`, `chauvet_piger` — weight=0,
@@ -321,11 +325,17 @@ desc / hist / composite / disclaimer`.
 
 - [x] `jobs/scheduler.ts` (node-cron): daily 2×, weekly Wed–Fri, monthly+quarterly
       по дням 2/7/12/17/22/27, digest 13:00 UTC, ретраи доставки 15 мин,
-      экспирация подписок hourly.
-- [x] Outbox-ретраи доставки (`deliveries` status/attempts).
+      экспирация подписок hourly, healthcheck 06:00, бэкап вс 03:30.
+- [x] Outbox-ретраи доставки (`deliveries` status/attempts, max 5);
+      дедуп дайджеста по `digest_key` (миграция 0002).
+- [x] `jobs/health.ts`: свежесть fetch per series (STALE_AFTER per freq),
+      backlog/dead deliveries, heartbeat композита → лог + DM админу
+      (`ADMIN_TG_ID`).
+- [x] `jobs/backup.ts` + `npm run backup`: online-бэкап SQLite в
+      `data/backups/`, ротация 14 файлов.
+- [x] Деплой: `ecosystem.config.cjs` (pm2), секция Deployment в README.
 - [ ] Release-awareness: повторный fetch через N часов при отсутствии новых
       данных (сейчас: фиксированные дни месяца — компромисс v1).
-- [ ] Деплой: VPS + pm2/docker-compose, бэкап sqlite, healthcheck.
 - [ ] GitHub Actions cron для fetch+post (только каналы; боту нужен
       long-running процесс).
 

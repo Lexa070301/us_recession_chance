@@ -13,6 +13,10 @@ export interface DeliveryRow {
   payload_text: string | null;
 }
 
+/**
+ * Enqueue a delivery. Returns the new row id, or 0 when a digest for this
+ * (digestKey, target) already exists (dedup via uq_deliveries_digest).
+ */
 export function enqueueDelivery(
   d: {
     eventId?: number;
@@ -28,10 +32,11 @@ export function enqueueDelivery(
   const res = db
     .prepare(
       `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT DO NOTHING`,
     )
     .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText);
-  return Number(res.lastInsertRowid);
+  return res.changes ? Number(res.lastInsertRowid) : 0;
 }
 
 export function markSent(id: number, conn?: Database.Database): void {

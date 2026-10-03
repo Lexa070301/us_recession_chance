@@ -210,5 +210,16 @@ export const modelConfigSchema = z.object({
     stars_per_30d: z.number().int(),
     period_days: z.number().int(),
   }),
+  // Fitted by scripts/fitModel.ts — optional until reviewed & wired in.
+  pooled_logit: z
+    .object({
+      horizon_months: z.number().int(),
+      sample: z.string(),
+      predictors: z.array(
+        z.object({ name: z.string(), mean: z.number(), std: z.number(), coef: z.number() }),
+      ),
+      intercept: z.number(),
+    })
+    .optional(),
 });
 export type ModelConfig = z.infer<typeof modelConfigSchema>;

@@ -132,6 +132,17 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries (status);
     `,
   },
+  {
+    id: "0002_delivery_dedup",
+    sql: `
+      -- One digest per (digest_key, target): re-running the digest job the
+      -- same day must not enqueue duplicates. Event deliveries (digest_key
+      -- NULL) are unaffected.
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_deliveries_digest
+        ON deliveries (digest_key, target_type, target_id)
+        WHERE digest_key IS NOT NULL;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;
