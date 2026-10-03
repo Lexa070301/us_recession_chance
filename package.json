@@ -12,7 +12,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "backfill": "tsx src/cli/backfill.ts",
+    "check-signals": "tsx src/cli/checkSignals.ts",
+    "send-test": "tsx src/cli/sendTest.ts",
+    "digest": "tsx -e \"import 'dotenv/config'; import { jobDigest } from './src/jobs/digest.ts'; jobDigest()\""
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

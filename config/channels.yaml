@@ -1,0 +1,17 @@
+version: 1
+
+# Delivery targets. chat_id is read from env so ids stay out of the repo.
+channels:
+  - id: en_main
+    locale: en
+    kind: channel
+    chat_id_env: TG_CHANNEL_EN
+  - id: ru_main
+    locale: ru
+    kind: channel
+    chat_id_env: TG_CHANNEL_RU
+
+defaults:
+  supported_locales: [en, ru]
+  fallback_locale: en
+  digest_time_utc: "13:00"

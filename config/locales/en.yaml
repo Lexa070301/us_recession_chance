@@ -1,0 +1,144 @@
+app:
+  name: "US Recession Watch"
+
+severity:
+  ok: "OK"
+  watch: "watch"
+  warning: "warning"
+  critical: "critical"
+
+bucket:
+  low: "LOW"
+  elevated: "ELEVATED"
+  high: "HIGH"
+  severe: "SEVERE"
+
+state_change:
+  cleared: "cleared"
+
+event:
+  title: "{{icon}} {{name}}"
+  value: "Value: {{value}}"
+  since: "In effect since {{since}}"
+  hist: "History: recession within 12m followed {{precision}}% of episodes (n={{episodes}}, {{sample}})"
+  hist_short: "Historical reliability: {{precision}}% ({{sample}})"
+  hist_insufficient: "Limited history ({{sample}}) — statistics unreliable"
+  transition: "Status: {{label}}"
+
+composite:
+  title: "📊 Composite 12-month recession risk"
+  line: "Score {{score}} → {{bucket}} ({{prob}})"
+  base: "Unconditional base rate: {{base}}"
+  nowcast_title: "⏱ Nowcast (already in recession?)"
+  footer: "Informational data only — not investment advice."
+
+digest:
+  title: "📋 Daily recession-signal digest — {{date}}"
+  no_changes: "No signal changes today. Composite: {{bucket}} ({{prob}})."
+  section_events: "Signal changes:"
+  section_active: "Active signals:"
+
+bot:
+  start: |
+    👋 Welcome to US Recession Watch.
+
+    I track leading US recession indicators (yield curve, credit spreads, labor market, housing) and alert you when they change state.
+
+    /status — current signals & composite risk
+    /signals — choose which signals to follow
+    /settings — alerts, language, delivery
+    /plan — subscription
+
+    ⚠️ Informational and educational data only — not investment advice. Historical frequencies do not guarantee future results.
+  disclaimer_short: "Informational data only — not investment advice."
+  status_empty: "No active warning signals."
+  settings_title: "⚙️ Settings"
+  settings_delivery: "Delivery mode"
+  delivery_instant: "Instant alerts"
+  delivery_digest: "Daily digest"
+  settings_min_severity: "Minimum severity"
+  settings_lang: "Language / Язык"
+  settings_updated: "Settings updated ✅"
+  settings_plus_only: "🔒 Available on the Plus plan — /plan"
+  signals_title: "📡 Signals (tap to toggle)"
+  plan_title: "💎 Plus plan"
+  plan_desc: |
+    Plus includes:
+    • Instant alerts (not just daily digest)
+    • Watch-level signals
+    • Custom signal selection
+    Price: {{stars}} Stars / {{days}} days
+  plan_invoice: "Plus subscription — {{days}} days"
+  plan_active: "✅ Plus active until {{until}}"
+  plan_thanks: "🎉 Thank you! Plus is active until {{until}}"
+  plan_expired: "Your Plus subscription has expired. Switched to free digest mode."
+  error_generic: "Something went wrong, please try again later."
+
+signal:
+  yield_curve_inversion:
+    name: "Yield curve inversion (10Y–3M)"
+    desc: "10Y minus 3M Treasury spread below zero — the classic leading recession signal."
+  curve_10y2y_inversion:
+    name: "Yield curve inversion (10Y–2Y)"
+    desc: "Most-watched curve pair; corroborates the 10Y–3M signal."
+  yield_curve_resteepening:
+    name: "Curve re-steepening"
+    desc: "Rapid rise of 10Y–3M spread after inversion — historically clusters near recession onset."
+  nyfed_recession_prob:
+    name: "NY Fed recession probability"
+    desc: "12-month recession probability from the Treasury spread probit model."
+  nfci_tightening:
+    name: "Financial conditions (NFCI)"
+    desc: "Chicago Fed index; positive = tighter-than-average conditions."
+  stlfsi_stress:
+    name: "Financial stress (STLFSI)"
+    desc: "St. Louis Fed stress index; positive = above-average stress."
+  hy_spread:
+    name: "High-yield credit spread"
+    desc: "ICE BofA US HY option-adjusted spread; widening = default-risk repricing."
+  bbb_spread:
+    name: "BBB corporate spread"
+    desc: "Investment-grade credit premium; broadening of credit stress."
+  sloos_tightening:
+    name: "Bank lending standards"
+    desc: "Net % of banks tightening C&I loan standards (SLOOS)."
+  permits_decline:
+    name: "Building permits"
+    desc: "New housing permits falling YoY — early housing-cycle signal."
+  housing_starts_decline:
+    name: "Housing starts"
+    desc: "New residential construction falling YoY."
+  durable_orders_decline:
+    name: "Durable goods orders"
+    desc: "New orders for durable goods falling YoY (ISM new-orders proxy)."
+  claims_trend:
+    name: "Initial jobless claims"
+    desc: "4-week average rising — earliest real-time labor signal."
+  continued_claims_rise:
+    name: "Continued claims"
+    desc: "Insured unemployment rising from its cycle low."
+  temp_help_decline:
+    name: "Temporary help employment"
+    desc: "Temp staffing falling YoY — firms cut temps first."
+  jolts_flows:
+    name: "JOLTS labor flows"
+    desc: "Openings and quits both declining — labor demand cooling."
+  lei_oecd_decline:
+    name: "Leading index (OECD CLI)"
+    desc: "Composite leading index declining for consecutive months."
+  indpro_decline:
+    name: "Industrial production"
+    desc: "Industrial production falling YoY — near-coincident."
+  sahm_rule:
+    name: "Sahm rule"
+    desc: "Unemployment ≥0.5pp above 12m low — signals recession ONSET, not a forecast."
+  chauvet_piger:
+    name: "Recession probability (Chauvet–Piger)"
+    desc: "Smoothed probability of already being in recession."
+
+series:
+  yield_10y3m: "10Y–3M Treasury spread"
+  yield_10y2y: "10Y–2Y Treasury spread"
+  icsa: "Initial claims"
+  ccsa: "Continued claims"
+  unrate: "Unemployment rate"

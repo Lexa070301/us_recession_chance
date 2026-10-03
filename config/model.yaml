@@ -1,0 +1,38 @@
+version: 1
+
+# NY Fed-style probit: P(recession within 12m) = N(alpha + beta * spread_10y3m_monthly_avg)
+# Coefficients per Estrella–Mishkin / NY Fed (to be refit by scripts/fitModel.ts).
+nyfed_probit:
+  alpha: -0.5333
+  beta: -0.6330
+  horizon_months: 12
+
+# Composite score -> risk band. Score = sum of active signal weights
+# (watch counts as half weight, warning full, critical weight + 0.5).
+composite:
+  state_weight:
+    watch: 0.5
+    warning: 1.0
+    critical: 1.5
+  bands:
+    - { min: 0, max: 4.99, bucket: low,      prob_label: "<15%" }
+    - { min: 5, max: 8.99, bucket: elevated, prob_label: "15–35%" }
+    - { min: 9, max: 12.99, bucket: high,    prob_label: "35–60%" }
+    - { min: 13, max: 999, bucket: severe,   prob_label: ">60%" }
+  # unconditional base rate for context: P(recession within next 12m)
+  base_rate_label: "~16%"
+
+# User-facing plan gating
+plans:
+  free:
+    delivery_mode: digest   # instant events are batched into daily digest
+    custom_signals: false
+    min_severity_floor: warning # free users can't subscribe below 'warning'
+  plus:
+    delivery_mode: instant
+    custom_signals: true
+    min_severity_floor: watch
+
+subscription:
+  stars_per_30d: 150        # price in Telegram Stars (XTR)
+  period_days: 30

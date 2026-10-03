@@ -1,0 +1,366 @@
+version: 1
+
+# Signal catalog. Evaluators are pure functions of a series' own history —
+# state is recomputed deterministically each run; the engine diffs vs the
+# stored state and emits SignalEvent only on transitions (episode dedupe).
+#
+# hist = static statistics from literature/backtest (see scripts/histStats.md).
+#   precision: share of signal EPISODES followed by recession within 12m
+#   recall:    share of recessions preceded by the signal
+#   insufficient_history: fewer than ~5 recessions covered by the series
+
+signals:
+  # =====================================================================
+  # FINANCIAL — yield curve & conditions
+  # =====================================================================
+  - key: yield_curve_inversion
+    block: financial
+    weight: 2
+    input: { key: yield_10y3m, transform: value }
+    evaluator:
+      type: episode_duration
+      params: { op: "<", threshold: 0, warn_periods: 10, critical_periods: 60, exit_periods: 5 }
+    hist:
+      sample: "1962–2024 (reconstructed 10y–3m)"
+      episodes: 9
+      recessions_covered: 8
+      precision: 0.78
+      recall: 0.95
+      median_lead_months: 12
+      note: "Only clear false positive since 1960s: 1966–67. Hit ~92% / FA ~25% (ROC study)."
+
+  - key: curve_10y2y_inversion
+    block: financial
+    weight: 1
+    input: { key: yield_10y2y, transform: value }
+    evaluator:
+      type: episode_duration
+      params: { op: "<", threshold: 0, warn_periods: 10, critical_periods: 60, exit_periods: 5 }
+    hist:
+      sample: "1976–2024"
+      episodes: 8
+      recessions_covered: 6
+      precision: 0.75
+      recall: 0.9
+      median_lead_months: 15
+      note: "Weaker than 10y–3m for 12m horizon; kept as corroborating."
+
+  - key: yield_curve_resteepening
+    block: financial
+    weight: 1
+    input: { key: yield_10y3m, transform: value }
+    evaluator:
+      type: change_over_period
+      params: { periods: 63, op: ">", warn: 1.0 }
+    hist:
+      sample: "1982–2024"
+      insufficient_history: true
+      note: "Rapid bear steepening after deep inversion historically clusters near recession onset; limited formal studies — treat as confirmatory."
+
+  - key: nyfed_recession_prob
+    block: composite
+    weight: 2
+    input: { key: yield_10y3m, transform: nyfed_prob }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: ">", threshold: 40 }
+          - { state: warning, op: ">", threshold: 30 }
+        exit_below: 25
+    hist:
+      sample: "1960–2024 (NY Fed model)"
+      episodes: 8
+      recessions_covered: 8
+      precision: 0.875
+      recall: 0.9
+      median_lead_months: 10
+      note: "Prob>40% missed only once (Oct-1966, 41.1%)."
+
+  - key: nfci_tightening
+    block: financial
+    weight: 2
+    input: { key: nfci, transform: value }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: ">", threshold: 1.0 }
+          - { state: warning, op: ">", threshold: 0.5 }
+          - { state: watch, op: ">", threshold: 0.0 }
+        exit_below: -0.1
+    hist:
+      sample: "1971–2024"
+      recessions_covered: 8
+      precision: 0.5
+      recall: 0.85
+      note: "NFCI>0.5 historically overlaps recession/stress episodes; >0 is common — watch only."
+
+  - key: stlfsi_stress
+    block: financial
+    weight: 1
+    input: { key: stlfsi, transform: value }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: ">", threshold: 1.0 }
+          - { state: warning, op: ">", threshold: 0.5 }
+          - { state: watch, op: ">", threshold: 0.0 }
+        exit_below: -0.1
+    hist:
+      sample: "1993–2024"
+      insufficient_history: true
+      note: "Only ~3 recessions covered (2001, 2008, 2020)."
+
+  # =====================================================================
+  # CREDIT
+  # =====================================================================
+  - key: hy_spread
+    block: credit
+    weight: 2
+    input: { key: hy_oas, transform: value }
+    evaluator:
+      type: any_of
+      branches:
+        - type: levels
+          params:
+            levels:
+              - { state: critical, op: ">", threshold: 8.0 }
+              - { state: warning, op: ">", threshold: 5.0 }
+            exit_below: 4.5
+        - type: change_over_period
+          params: { periods: 63, op: ">", warn: 1.0 }
+    hist:
+      sample: "1997–2024"
+      recessions_covered: 3
+      insufficient_history: true
+      precision: 0.6
+      recall: 1.0
+      median_lead_months: 6
+      note: "Caught 2001/2008/2020 but flashed in 2011, 2015–16, 2022 without recession."
+
+  - key: bbb_spread
+    block: credit
+    weight: 1
+    input: { key: bbb_oas, transform: value }
+    evaluator:
+      type: any_of
+      branches:
+        - type: levels
+          params:
+            levels:
+              - { state: warning, op: ">", threshold: 2.5 }
+            exit_below: 2.2
+        - type: change_over_period
+          params: { periods: 63, op: ">", warn: 0.5 }
+    hist:
+      sample: "1997–2024"
+      insufficient_history: true
+      note: "BBB proxy for investment-grade/excess-bond-premium channel (FEDS OOS work)."
+
+  - key: sloos_tightening
+    block: credit
+    weight: 2
+    input: { key: sloos_ci, transform: value }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: ">", threshold: 40 }
+          - { state: warning, op: ">", threshold: 20 }
+          - { state: watch, op: ">", threshold: 0 }
+        exit_below: -5
+    hist:
+      sample: "1990–2024 (quarterly)"
+      recessions_covered: 4
+      insufficient_history: true
+      precision: 0.75
+      recall: 1.0
+      median_lead_months: 9
+      note: "Net % banks tightening C&I loans; led 2001, 2008, 2020; mild FP ~2016."
+
+  # =====================================================================
+  # HOUSING / INVESTMENT
+  # =====================================================================
+  - key: permits_decline
+    block: housing
+    weight: 1
+    input: { key: permits, transform: value }
+    evaluator:
+      type: yoy
+      params: { op: "<", threshold: 0, warn: 3, critical: -10 }
+    hist:
+      sample: "1960–2024"
+      recessions_covered: 9
+      precision: 0.6
+      recall: 0.9
+      median_lead_months: 10
+      note: "Housing turns down early; FPs in mid-cycle slowdowns (1966, 1995)."
+
+  - key: housing_starts_decline
+    block: housing
+    weight: 1
+    input: { key: housing_starts, transform: value }
+    evaluator:
+      type: yoy
+      params: { op: "<", threshold: -10, warn: 2 }
+    hist:
+      sample: "1959–2024"
+      recessions_covered: 9
+      precision: 0.7
+      recall: 0.85
+      median_lead_months: 9
+
+  - key: durable_orders_decline
+    block: housing
+    weight: 1
+    input: { key: dg_orders, transform: value }
+    evaluator:
+      type: yoy
+      params: { op: "<", threshold: 0, warn: 3 }
+    hist:
+      sample: "1992–2024"
+      insufficient_history: true
+      note: "Proxy for ISM new orders (licensed); volatile — streak required."
+
+  # =====================================================================
+  # LABOR
+  # =====================================================================
+  - key: claims_trend
+    block: labor
+    weight: 1
+    input: { key: icsa, transform: value }
+    evaluator:
+      type: any_of
+      branches:
+        - type: streak
+          input: { key: icsa, transform: ma4 }
+          params: { direction: up, warn_count: 8, critical_count: 12 }
+        - type: rise_from_trough
+          input: { key: icsa, transform: ma4 }
+          params: { window: 52, rise_pct: 15, critical_pct: 25 }
+    hist:
+      sample: "1967–2024"
+      recessions_covered: 8
+      precision: 0.7
+      recall: 0.9
+      median_lead_months: 4
+      note: "Short horizon (1–6m) — earliest real-time labor signal."
+
+  - key: continued_claims_rise
+    block: labor
+    weight: 1
+    input: { key: ccsa, transform: value }
+    evaluator:
+      type: rise_from_trough
+      params: { window: 104, rise_pct: 10, critical_pct: 20 }
+    hist:
+      sample: "1967–2024"
+      recessions_covered: 8
+      precision: 0.7
+      recall: 0.9
+      median_lead_months: 4
+
+  - key: temp_help_decline
+    block: labor
+    weight: 1
+    input: { key: temp_help, transform: value }
+    evaluator:
+      type: yoy
+      params: { op: "<", threshold: 0, warn: 3 }
+    hist:
+      sample: "1990–2024"
+      insufficient_history: true
+      note: "Firms cut temps before permanent layoffs; declined before 2001, 2008, 2020 and in 2022–24."
+
+  - key: jolts_flows
+    block: labor
+    weight: 1
+    input: { key: job_openings, transform: value }
+    evaluator:
+      type: all_of
+      branches:
+        - type: streak
+          input: { key: job_openings, transform: value }
+          params: { direction: down, warn_count: 3 }
+        - type: streak
+          input: { key: quits_rate, transform: value }
+          params: { direction: down, warn_count: 3 }
+    hist:
+      sample: "2000–2024"
+      insufficient_history: true
+      note: "JOLTS covers only 2 recessions (2008, 2020) — statistics meaningless."
+
+  # =====================================================================
+  # COMPOSITE / REAL ACTIVITY
+  # =====================================================================
+  - key: lei_oecd_decline
+    block: composite
+    weight: 2
+    input: { key: lei_oecd, transform: value }
+    evaluator:
+      type: streak
+      params: { direction: down, warn_count: 6, critical_count: 9 }
+    hist:
+      sample: "1955–2024"
+      recessions_covered: 10
+      precision: 0.7
+      recall: 0.9
+      median_lead_months: 9
+      note: "Conference Board LEI logged its first-ever false positive in 2022–24 — treat corroboratively."
+
+  - key: indpro_decline
+    block: composite
+    weight: 1
+    input: { key: indpro, transform: value }
+    evaluator:
+      type: yoy
+      params: { op: "<", threshold: 0, warn: 2 }
+    hist:
+      sample: "1948–2024"
+      recessions_covered: 12
+      precision: 0.85
+      recall: 0.8
+      median_lead_months: 2
+      note: "Near-coincident NBER input; short lead — confirmation more than forecast."
+
+  # =====================================================================
+  # NOWCAST — "are we already in recession?" (not part of 12m score)
+  # =====================================================================
+  - key: sahm_rule
+    block: nowcast
+    weight: 0
+    input: { key: sahm, transform: value }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: ">=", threshold: 0.5 }
+        exit_below: 0.4
+    hist:
+      sample: "1949–2024"
+      episodes: 14
+      recessions_covered: 12
+      precision: 0.85
+      recall: 1.0
+      median_lead_months: -3
+      note: "Triggers ~3.4m AFTER official start on average — onset confirmation, not a forecast. FPs: 1959, 1969 (timing), 2024."
+
+  - key: chauvet_piger
+    block: nowcast
+    weight: 0
+    input: { key: recprob_chauvet, transform: value }
+    evaluator:
+      type: levels
+      params:
+        levels:
+          - { state: warning, op: ">", threshold: 20 }
+          - { state: critical, op: ">", threshold: 50 }
+        exit_below: 15
+    hist:
+      sample: "1967–2024"
+      recessions_covered: 8
+      precision: 0.9
+      recall: 0.95
+      note: "Smoothed recession probability (Chauvet–Piger), NBER-consistent."

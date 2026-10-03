@@ -6,8 +6,8 @@ dist/
 .env.local
 .env.*.local
 
-# Data & databases
-data/
+# Data & databases (project-root data dir only)
+/data/
 *.sqlite
 *.sqlite3
 *.db

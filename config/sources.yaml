@@ -1,0 +1,202 @@
+version: 1
+
+data_sources:
+  fred:
+    base_url: "https://api.stlouisfed.org/fred"
+    file_type: "json"
+    api_key_env: "FRED_API_KEY"
+    rate_limit_rpm: 100 # FRED allows 120/min
+    retry_delay_ms: 5000
+    max_retries: 3
+
+# hist_start = real coverage start of the series (for honest hist stats).
+series:
+  # --- financial / rates ---
+  - key: yield_10y3m
+    source: fred
+    series_id: T10Y3M
+    frequency: daily
+    unit: pct_points
+    hist_start: "1982-01"
+  - key: yield_10y2y
+    source: fred
+    series_id: T10Y2Y
+    frequency: daily
+    unit: pct_points
+    hist_start: "1976-06"
+  - key: dgs3mo
+    source: fred
+    series_id: DGS3MO
+    frequency: daily
+    unit: percent
+    hist_start: "1982-01"
+  - key: dgs2
+    source: fred
+    series_id: DGS2
+    frequency: daily
+    unit: percent
+    hist_start: "1976-06"
+  - key: dgs10
+    source: fred
+    series_id: DGS10
+    frequency: daily
+    unit: percent
+    hist_start: "1962-01"
+  - key: vix
+    source: fred
+    series_id: VIXCLS
+    frequency: daily
+    unit: index
+    hist_start: "1990-01"
+
+  # --- credit ---
+  - key: hy_oas
+    source: fred
+    series_id: BAMLH0A0HYM2
+    frequency: daily
+    unit: percent
+    hist_start: "1996-12"
+  - key: bbb_oas
+    source: fred
+    series_id: BAMLC0A4CBBB
+    frequency: daily
+    unit: percent
+    hist_start: "1996-12"
+
+  # --- financial conditions ---
+  - key: nfci
+    source: fred
+    series_id: NFCI
+    frequency: weekly
+    unit: index
+    hist_start: "1971-01"
+  - key: anfci
+    source: fred
+    series_id: ANFCI
+    frequency: weekly
+    unit: index
+    hist_start: "1971-01"
+  - key: stlfsi
+    source: fred
+    series_id: STLFSI4
+    frequency: weekly
+    unit: index
+    hist_start: "1993-12"
+
+  # --- housing / investment ---
+  - key: permits
+    source: fred
+    series_id: PERMIT
+    frequency: monthly
+    unit: thousands_saar
+    hist_start: "1960-01"
+  - key: housing_starts
+    source: fred
+    series_id: HOUST
+    frequency: monthly
+    unit: thousands_saar
+    hist_start: "1959-01"
+  - key: dg_orders
+    source: fred
+    series_id: DGORDER
+    frequency: monthly
+    unit: usd_millions
+    hist_start: "1992-02"
+  - key: indpro
+    source: fred
+    series_id: INDPRO
+    frequency: monthly
+    unit: index
+    hist_start: "1919-01"
+
+  # --- labor ---
+  - key: icsa
+    source: fred
+    series_id: ICSA
+    frequency: weekly
+    unit: persons
+    hist_start: "1967-01"
+  - key: ccsa
+    source: fred
+    series_id: CCSA
+    frequency: weekly
+    unit: persons
+    hist_start: "1967-01"
+  - key: unrate
+    source: fred
+    series_id: UNRATE
+    frequency: monthly
+    unit: percent
+    hist_start: "1948-01"
+  - key: payems
+    source: fred
+    series_id: PAYEMS
+    frequency: monthly
+    unit: thousands
+    hist_start: "1939-01"
+  - key: temp_help
+    source: fred
+    series_id: TEMPHELPS
+    frequency: monthly
+    unit: thousands
+    hist_start: "1990-01"
+  - key: job_openings
+    source: fred
+    series_id: JTSJOL
+    frequency: monthly
+    unit: thousands
+    hist_start: "2000-12"
+  - key: quits_rate
+    source: fred
+    series_id: JTSQUR
+    frequency: monthly
+    unit: percent
+    hist_start: "2000-12"
+  - key: hires_rate
+    source: fred
+    series_id: JTSHIR
+    frequency: monthly
+    unit: percent
+    hist_start: "2000-12"
+  - key: layoffs_rate
+    source: fred
+    series_id: JTSLDL
+    frequency: monthly
+    unit: percent
+    hist_start: "2000-12"
+
+  # --- bank lending standards (SLOOS, quarterly) ---
+  - key: sloos_ci
+    source: fred
+    series_id: DRTSCILM
+    frequency: quarterly
+    unit: percent
+    hist_start: "1990-04"
+
+  # --- composite / nowcast ---
+  - key: lei_oecd
+    source: fred
+    series_id: USSLIND
+    frequency: monthly
+    unit: index
+    hist_start: "1955-01"
+  - key: sahm
+    source: fred
+    series_id: SAHMREALTIME
+    frequency: monthly
+    unit: pct_points
+    hist_start: "1949-12"
+  - key: recprob_chauvet
+    source: fred
+    series_id: RECPROUSM156N
+    frequency: monthly
+    unit: percent
+    hist_start: "1967-08"
+
+  # --- recession marker (NBER via FRED) ---
+  - key: usrec
+    source: fred
+    series_id: USREC
+    frequency: monthly
+    unit: binary
+    hist_start: "1854-12"

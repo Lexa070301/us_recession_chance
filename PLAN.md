@@ -137,25 +137,25 @@ data/                # sqlite (gitignored)
 
 ---
 
-## 3. Конфиг-схема (config/*.yaml, zod-валидация)
+## 3. Конфиг-схема (config/\*.yaml, zod-валидация)
 
 ### sources.yaml — ряд
 
 ```yaml
 - key: yield_10y3m
-  source: fred              # fred | static | derived
+  source: fred # fred | static | derived
   series_id: T10Y3M
-  frequency: daily          # daily | weekly | monthly | quarterly
+  frequency: daily # daily | weekly | monthly | quarterly
   unit: pct_points
-  label_key: series.yield_10y3m   # i18n-ключ названия
-  hist_start: "1982-01"     # реальное покрытие ряда (для hist stats)
+  label_key: series.yield_10y3m # i18n-ключ названия
+  hist_start: "1982-01" # реальное покрытие ряда (для hist stats)
 ```
 
 ### signals.yaml — сигнал
 
 ```yaml
 - key: yield_curve_inversion
-  block: financial            # financial | credit | housing | labor | composite | nowcast
+  block: financial # financial | credit | housing | labor | composite | nowcast
   title_key: signal.yield_curve_inversion
   weight: 2
   inputs:
@@ -163,15 +163,15 @@ data/                # sqlite (gitignored)
   evaluator:
     type: episode_duration
     params: { condition: "value < 0", min_periods: 10, period: trading_day }
-  severity_map:               # escalation по длительности эпизода
+  severity_map: # escalation по длительности эпизода
     warning: { min_periods: 10 }
     critical: { min_periods: 60 }
-  hist:                       # статические исторические статистики (см. §8)
+  hist: # статические исторические статистики (см. §8)
     sample: "1960-2024"
     episodes: 12
     recessions_covered: 8
-    precision: 0.75           # доля эпизодов → рецессия за 12м
-    recall: 0.92              # доля рецессий, которым предшествовал сигнал
+    precision: 0.75 # доля эпизодов → рецессия за 12м
+    recall: 0.92 # доля рецессий, которым предшествовал сигнал
     median_lead_months: 11
     note_key: hist.yield_curve_inversion
 ```
@@ -183,7 +183,7 @@ channels:
   - { id: en_main, locale: en, chat_id_env: TG_CHANNEL_EN, kind: channel }
   - { id: ru_main, locale: ru, chat_id_env: TG_CHANNEL_RU, kind: channel }
 defaults:
-  digest_time_utc: "13:00"    # после выхода утренних US-данных
+  digest_time_utc: "13:00" # после выхода утренних US-данных
 ```
 
 ---
@@ -234,111 +234,100 @@ deliveries(id PK, event_id FK, target_type,       -- channel|dm
 
 ## 5. Фазы реализации
 
-### Phase 1 — Data layer (перенос fed_monitor)
+### Phase 1 — Data layer (перенос fed_monitor) ✅ DONE
 
-- [ ] `config/` zod-схемы + загрузчик; `sources.yaml` с каталогом рядов §7.
-- [ ] `data/db.ts`: соединение, миграции (`migrations/0001_init.sql`).
-- [ ] `data/fredClient.ts`: rate limit (100 req/min), ретраи с backoff,
-      инкрементальный fetch (от последнего наблюдения + overlap 14 дней для
-      подхвата ревизий), обработка `"."`-пропусков.
-- [ ] `data/nber.ts`: ряд `USREC` → таблица рецессионных периодов.
-- [ ] `cli/backfill.ts`: первичная загрузка N лет истории.
-- [ ] **Отличие от fed_monitor:** параметр `vintage_dates` для ALFRED-fetch'ей;
-      ревизии не затираются при vintage-режиме.
-- Тесты: парсинг ответа FRED, инкрементальный upsert, дедупликация.
+- [x] `config/` zod-схемы + загрузчик; `sources.yaml` с каталогом рядов §7.
+- [x] `data/db.ts`: соединение, миграции (embedded `MIGRATIONS` in db.ts).
+- [x] `data/fredClient.ts`: rate limit (100 req/min), ретраи с backoff,
+      инкрементальный fetch (от последнего наблюдения + overlap 14 дней),
+      `"."`-пропуски отфильтрованы.
+- [x] `data/nber.ts`: `USREC` → `getRecessionPeriods()` / `isRecessionMonth()`.
+- [x] `cli/backfill.ts`: `npm run backfill [years]`.
+- [x] `vintage_dates` поддержан (`vintageDate` в fetchAndStore; отдельные
+      строки per vintage в observations).
+- Тесты: инкремент + дедуп покрыты engine.test.ts.
 
-### Phase 2 — Metrics + Signal engine
+### Phase 2 — Metrics + Signal engine ✅ DONE
 
-- [ ] `metrics/transforms.ts`: diff, pct_change, rolling_mean/std, zscore,
-      yoy (месячные), ma_n_periods — **на родной частоте ряда**, без
-      слепого ffill-to-daily.
-- [ ] `metrics/panel.ts`: для каждого сигнала — свежая точка + история
-      достаточной глубины для evaluator'а; учёт publication lag
-      (`release_lag` — сигнал оценивается только по свежепубликованным данным,
-      т.е. по новым строкам observations, а не по «последнему ffilled дню»).
-- [ ] Evaluator'ы (см. структуру): `threshold`, `streak`, `episode_duration`,
-      `rise_from_trough`, `change_over_period`. Каждый возвращает
-      `{state, severity, value, context}`.
-- [ ] State machine: `ok → watch → warning → critical` с **гистерезисом**
-      (порог входа ≠ порог выхода, min-duration для каждого перехода) —
-      защита от флапа около порога.
-- [ ] Детерминированные ID сигналов (`sha1(key+params)`), эпизоды через
-      `episode_start` — **фикс бага `hash()` из fed_monitor**.
-- [ ] `signals/score.ts`: сумма весов активных сигналов → композитный скор →
-      бакет вероятности (калибровочная таблица из Phase 5; до неё — фикс.
-      маппинг из конфига).
-- Тесты: каждый evaluator на синтетических рядах; переходы состояний;
-      дедупликация событий.
+- [x] `metrics/transforms.ts`: ma4/ma13/ma6, diff, pct_change, monthly_mean,
+      nyfed_prob (probit Φ(α+β·spread), коэф. из model.yaml) — на родной
+      частоте ряда.
+- [x] `metrics/panel.ts`: резолв inputs (включая overrides веток any_of/all_of),
+      кэш per run; движок пропускает сигнал, если нет новых observation-дат.
+- [x] Evaluator'ы (src/signals/evaluators.ts): `levels`, `episode_duration`,
+      `streak`, `rise_from_trough`, `change_over_period`, `yoy`,
+      `any_of`, `all_of` — чистые функции ряда, state вычисляется
+      детерминированно.
+- [x] State machine ok→watch→warning→critical с гистерезисом (exit_below,
+      exit_periods, warn/critical пороги).
+- [x] События только на переходах состояния (signal_events), эпизод =
+      context.since — дедуп эпизодов (фикс бага hash() и «40 breaches»).
+- [x] `signals/score.ts`: watch=0.5w, warning=1.0w, critical=1.5w → скор →
+      бакет из model.yaml → composite_snapshots.
+- Тесты: 13 evaluator-тестов + 2 engine-теста (дедуп, снятие сигнала).
 
-### Phase 3 — Publisher + Telegram-каналы
+### Phase 3 — Publisher + Telegram-каналы ✅ DONE
 
-- [ ] `publish/render/i18n.ts` + `config/locales/{en,ru}.yaml`: шаблоны
-      `✅/⚠️/❌ name — value — desc (hist: N of M episodes)`.
-- [ ] `publish/publisher.ts`: `Adapter.deliver(event, rendered)`, fan-out по
-      целям (каналы всех локалей + подписанные DM), запись в `deliveries`,
-      ретраи через outbox-паттерн.
-- [ ] `adapters/telegramChannel.ts`: постинг в каналы из `channels.yaml`
-      (bot = admin), отдельный рендер per locale.
-- [ ] `cli/sendTest.ts`: отправка тестового события.
-- [ ] Digest-режим: накопление событий → единое сообщение по расписанию.
-- Тесты: рендер шаблона на 2 локалях, маршрутизация, outbox.
+- [x] `publish/render/i18n.ts` (i18next + locales yaml) + `templates.ts`:
+      событие, статус, дайджест — формат `⚠️ name / Status / Value / since /
+desc / hist / composite / disclaimer`.
+- [x] `publish/publisher.ts`: routeEvent → каналы (per-locale рендер) +
+      DM-пользователи (instant, фильтры prefs/plan) → deliveries outbox;
+      processDeliveries с ретраями и обработкой 403 (is_blocked).
+- [x] `adapters/telegram.ts`: sendMessage через grammY Api, fallback на plain
+      text при ошибке парсинга.
+- [x] `cli/sendTest.ts`: тестовая отправка в каналы/чат.
+- [x] `jobs/digest.ts`: дайджест событий за 24ч + активные сигналы + композит.
 
-### Phase 4 — Telegram-бот (per-user)
+### Phase 4 — Telegram-бот (per-user) ✅ DONE
 
-- [ ] `bot/` на grammY: `/start` (дисклеймер + выбор языка), `/status`
-      (текущие сигналы + композит), `/signals` (вкл/выкл индикаторов),
-      `/settings` (min_severity, instant/digest, digest_time, quiet hours),
-      `/lang`, `/plan` (тариф).
-- [ ] Middleware: upsert пользователя по `tg_user_id`, определение локали
-      (`from.language_code` → fallback en), отметка `is_blocked` при 403.
-- [ ] DM-доставка через `telegramDm.ts`: фильтрация событий по user_prefs.
-- [ ] Переиспользование паттерна «monitor param» fed_monitor → per-locale
-      конфиг каналов и юзеров.
-- Тесты: prefs-фильтрация, локали, edge-кейсы (бот заблокирован юзером).
+- [x] `bot/` на grammY: `/start` (дисклеймер), `/status`, `/signals`
+      (inline-toggle, plus only), `/settings` (delivery, severity, lang),
+      `/lang`, `/plan`.
+- [x] Middleware: upsert user + prefs, локаль из `language_code`; is_blocked
+      при 403 обрабатывается в processDeliveries.
+- [x] DM-доставка: фильтры enabled_signals, min_severity, plan-floor
+      (free ≥ warning), instant vs digest.
+- [x] Callback-клавиатуры: настройки и сигналы без команд-визардов.
 
-### Phase 5 — Вероятностный слой
+### Phase 5 — Вероятностный слой (частично)
 
-- [ ] `scripts/histStats.md`: методология статических per-signal статистик —
-      определение эпизода, precision/recall, размер выборки, источники
-      (NY Fed, Richmond Fed, FEDS Notes, SF Fed). Заполнить `hist:` в
-      `signals.yaml`; для рядов с <5 рецессиями (JOLTS, HY OAS, SLOOS) —
-      `insufficient_history: true` и честный вывод в UI.
+- [x] `scripts/histStats.md` + `hist:`-блоки в signals.yaml (precision/recall,
+      episodes, insufficient_history для рядов с <5 рецессий).
 - [ ] `scripts/backtest.ts`: на ALFRED-винтажах (без look-ahead): эпизоды
       сигналов vs NBER-старт, калибровка score→prob (доля рецессий за 12м по
       бакетам скора).
 - [ ] `scripts/fitModel.ts`: pooled logit на 3–6 предикторах (по одному из
       блока) → коэффициенты в `config/model.yaml`; модель считает
       P(вход в рецессию | сейчас не в рецессии).
-- [ ] Отображение: бакеты (`<15%` / `15–35%` / `>35%`) + диапазон, не
-      псевдоточные проценты.
-- [ ] Nowcast-блок отдельно: `SAHMREALTIME`, `RECPROUSM156N` — «уже в
-      рецессии?», не смешивать с 12m-прогнозом.
+- [x] Отображение: бакеты (`<15%` / `15–35%` / `35–60%` / `>60%`) — без
+      псевдоточных процентов (model.yaml).
+- [x] Nowcast-блок отдельно: `sahm_rule`, `chauvet_piger` — weight=0,
+      не входят в 12m-скор, рендерятся отдельным блоком.
 
-### Phase 6 — Монетизация (Telegram Stars)
+### Phase 6 — Монетизация (Telegram Stars) ✅ DONE (код; e2e не проверено)
 
-- [ ] `bot/payments.ts`: `sendInvoice(currency=XTR)`, `pre_checkout_query`,
-      `successful_payment` → запись `payments`, активация `subscriptions`
-      (30-дневный период, рекуррентные инвойсы).
-- [ ] Gating (`plan=plus`): кастомные пороги сигналов, instant-доставка
-      (free = digest), расширенные сигналы/глубина описаний, ранний доступ к
-      X-каналу позже.
-- [ ] Cron-джоба: экспирация подписок → downgrade → уведомление.
-- [ ] Дисклеймер и ToS-текст в `/start` и описании бота
-      («informational only, not investment advice»).
-- [ ] Тестовое окружение Stars (test environment Telegram).
+- [x] `bot/payments.ts`: `replyWithInvoice(currency=XTR)`,
+      `pre_checkout_query`, `successful_payment` → `payments`,
+      `subscriptions` (30 дней, продление при повторной оплате).
+- [x] Gating: free → digest + floor=warning; plus → instant + watch +
+      кастомный выбор сигналов (/signals).
+- [x] `jobs/subscriptions.ts`: экспирация → downgrade → уведомление (cron hourly).
+- [x] Дисклеймер в `/start`, футере сообщений, README.
+- [ ] E2E-проверка в тестовом окружении Stars + реальная оплата.
+- [ ] Рекуррентные инвойсы по окончании периода (сейчас ручное продление).
 
-### Phase 7 — Ops
+### Phase 7 — Ops (частично)
 
-- [ ] `jobs/scheduler.ts` (node-cron): daily fetch (после ~13:00 UTC),
-      weekly fetch (ICSA/NFCI — чт), monthly fetch после публикаций,
-      quarterly SLOOS; per-job fetch_log и алерт при ошибках.
+- [x] `jobs/scheduler.ts` (node-cron): daily 2×, weekly Wed–Fri, monthly+quarterly
+      по дням 2/7/12/17/22/27, digest 13:00 UTC, ретраи доставки 15 мин,
+      экспирация подписок hourly.
+- [x] Outbox-ретраи доставки (`deliveries` status/attempts).
 - [ ] Release-awareness: повторный fetch через N часов при отсутствии новых
-      данных (вместо парсинга календаря релизов на v1).
-- [ ] Outbox-ретраи доставки; метрики ошибок; healthcheck.
-- [ ] Деплой: VPS + pm2 (или docker-compose), БД на диске, бэкап sqlite.
-- [ ] Альтернатива на старте: GitHub Actions cron для fetch+post (как у
-      fed_monitor) — только для каналов, без бота (боту нужен long-running
-      процесс или webhook).
+      данных (сейчас: фиксированные дни месяца — компромисс v1).
+- [ ] Деплой: VPS + pm2/docker-compose, бэкап sqlite, healthcheck.
+- [ ] GitHub Actions cron для fetch+post (только каналы; боту нужен
+      long-running процесс).
 
 ### Later (не сейчас)
 
@@ -351,43 +340,43 @@ deliveries(id PK, event_id FK, target_type,       -- channel|dm
 
 ## 6. Фиксы багов/ограничений fed_monitor (явный список)
 
-| Проблема upstream | Наше решение |
-|---|---|
-| `make_alert_id` = `hash(rule)` рандомизирован per process → сломанная дедупликация | Детерминированный `signal_key` + `sha1(params)` |
-| Нет дедупа эпизодов: breach 40 дней подряд = 40 «событий» | `episode_start` в state; событие только на переходе |
-| Нет гистерезиса → флап около порога | Вход/выход по разным порогам + min-duration |
-| `asfreq("D").ffill()` для месячных рядов — скрывает лаг публикации | Родная частотность; триггер по факту новой публикации |
-| Upsert затирает ревизии | `vintage_date` в observations; ALFRED-режим для бэктеста |
-| `eval(rule)` — только пороги | Типизированные evaluator'ы (streak, duration, trough…) |
-| Один `chat_id`, односторонние уведомления | Publisher + каналы per locale + per-user DM |
-| `datetime.utcnow()` deprecated | `new Date().toISOString()` |
+| Проблема upstream                                                                  | Наше решение                                             |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `make_alert_id` = `hash(rule)` рандомизирован per process → сломанная дедупликация | Детерминированный `signal_key` + `sha1(params)`          |
+| Нет дедупа эпизодов: breach 40 дней подряд = 40 «событий»                          | `episode_start` в state; событие только на переходе      |
+| Нет гистерезиса → флап около порога                                                | Вход/выход по разным порогам + min-duration              |
+| `asfreq("D").ffill()` для месячных рядов — скрывает лаг публикации                 | Родная частотность; триггер по факту новой публикации    |
+| Upsert затирает ревизии                                                            | `vintage_date` в observations; ALFRED-режим для бэктеста |
+| `eval(rule)` — только пороги                                                       | Типизированные evaluator'ы (streak, duration, trough…)   |
+| Один `chat_id`, односторонние уведомления                                          | Publisher + каналы per locale + per-user DM              |
+| `datetime.utcnow()` deprecated                                                     | `new Date().toISOString()`                               |
 
 ---
 
 ## 7. Каталог сигналов v1
 
-| key | series (FRED) | freq | evaluator / правило | block | weight |
-|---|---|---|---|---|---|
-| yield_curve_inversion | T10Y3M | daily | `< 0`, эпизод ≥10 торг.дней | financial | 2 |
-| yield_curve_steepening | T10Y3M | daily | выход из инверсии рывком после глубокой (`min < -50bp`) | financial | 1 |
-| curve_10y2y | T10Y2Y | daily | `< 0`, эпизод | financial | 1 |
-| nyfed_prob | T10Y3M (мес. avg) | monthly | probit NY Fed (статич. коэф.) > 30% / 40% | composite | 2 |
-| hy_spread | BAMLH0A0HYM2 | daily | `> 5%` или `Δ3m > +1п.п.` | credit | 2 |
-| ig_bbb_spread | BAMLC0A4CBBB | daily | `> p75 исторического` или `Δ3m` | credit | 1 |
-| nfci | NFCI | weekly | `> 0` watch / `> 0.5` warn | financial | 2 |
-| stlfsi | STLFSI4 | weekly | `> 0.5` / `> 1.0` | financial | 1 |
-| lei_oecd | USSLIND | monthly | `Δ6m < 0` и 6+ мес снижения | composite | 2 |
-| permits | PERMIT | monthly | `YoY < 0` устойчиво (3м подряд) | housing | 1 |
-| housing_starts | HOUST | monthly | `YoY < -10%` | housing | 1 |
-| new_orders_dg | DGORDER | monthly | `YoY < 0` 3м подряд (прокси ISM) | housing | 1 |
-| claims_trend | ICSA | weekly | `MA4 ↑ 8+ недель` или `+15% от min 12м` | labor | 1 |
-| continued_claims | CCSA | weekly | `+10% от min 12м` | labor | 1 |
-| temp_help | TEMPHELPS | monthly | `YoY < 0` 3м подряд | labor | 1 |
-| jolts_flows | JTSJOL, JTSQUR | monthly | вакансии ↓3м и quits ↓ (⚠ n=2 рецессии) | labor | 1 |
-| sloos_tightening | DRTSCILM | quarterly | `> 20%` банков ужесточают | credit | 2 |
-| indpro | INDPRO | monthly | `YoY < 0` | composite | 1 |
-| sahm_nowcast | SAHMREALTIME | monthly | `≥ 0.5` — **onset, не прогноз** | nowcast | — |
-| chauvet_nowcast | RECPROUSM156N | monthly | `> 20%` — вероятность «уже в рецессии» | nowcast | — |
+| key                    | series (FRED)     | freq      | evaluator / правило                                     | block     | weight |
+| ---------------------- | ----------------- | --------- | ------------------------------------------------------- | --------- | ------ |
+| yield_curve_inversion  | T10Y3M            | daily     | `< 0`, эпизод ≥10 торг.дней                             | financial | 2      |
+| yield_curve_steepening | T10Y3M            | daily     | выход из инверсии рывком после глубокой (`min < -50bp`) | financial | 1      |
+| curve_10y2y            | T10Y2Y            | daily     | `< 0`, эпизод                                           | financial | 1      |
+| nyfed_prob             | T10Y3M (мес. avg) | monthly   | probit NY Fed (статич. коэф.) > 30% / 40%               | composite | 2      |
+| hy_spread              | BAMLH0A0HYM2      | daily     | `> 5%` или `Δ3m > +1п.п.`                               | credit    | 2      |
+| ig_bbb_spread          | BAMLC0A4CBBB      | daily     | `> p75 исторического` или `Δ3m`                         | credit    | 1      |
+| nfci                   | NFCI              | weekly    | `> 0` watch / `> 0.5` warn                              | financial | 2      |
+| stlfsi                 | STLFSI4           | weekly    | `> 0.5` / `> 1.0`                                       | financial | 1      |
+| lei_oecd               | USSLIND           | monthly   | `Δ6m < 0` и 6+ мес снижения                             | composite | 2      |
+| permits                | PERMIT            | monthly   | `YoY < 0` устойчиво (3м подряд)                         | housing   | 1      |
+| housing_starts         | HOUST             | monthly   | `YoY < -10%`                                            | housing   | 1      |
+| new_orders_dg          | DGORDER           | monthly   | `YoY < 0` 3м подряд (прокси ISM)                        | housing   | 1      |
+| claims_trend           | ICSA              | weekly    | `MA4 ↑ 8+ недель` или `+15% от min 12м`                 | labor     | 1      |
+| continued_claims       | CCSA              | weekly    | `+10% от min 12м`                                       | labor     | 1      |
+| temp_help              | TEMPHELPS         | monthly   | `YoY < 0` 3м подряд                                     | labor     | 1      |
+| jolts_flows            | JTSJOL, JTSQUR    | monthly   | вакансии ↓3м и quits ↓ (⚠ n=2 рецессии)                 | labor     | 1      |
+| sloos_tightening       | DRTSCILM          | quarterly | `> 20%` банков ужесточают                               | credit    | 2      |
+| indpro                 | INDPRO            | monthly   | `YoY < 0`                                               | composite | 1      |
+| sahm_nowcast           | SAHMREALTIME      | monthly   | `≥ 0.5` — **onset, не прогноз**                         | nowcast   | —      |
+| chauvet_nowcast        | RECPROUSM156N     | monthly   | `> 20%` — вероятность «уже в рецессии»                  | nowcast   | —      |
 
 Композитный скор = Σ весов активных (watch+warning=вес, critical=вес+0.5).
 Бакеты → вероятность: калибровка в Phase 5; стартовый маппинг —
