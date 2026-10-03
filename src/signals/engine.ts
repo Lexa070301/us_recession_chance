@@ -27,6 +27,8 @@ export const YOY_PERIODS: Record<Frequency, number> = {
 export interface EngineRun {
   events: SignalEventRow[];
   composite: CompositeResult;
+  /** Score of the previous snapshot (null on first run) — for threshold alerts. */
+  prevScore: number | null;
   evaluated: number;
   skipped: number;
 }
@@ -109,5 +111,5 @@ export function runEngine(conn?: Database.Database): EngineRun {
     );
   }
 
-  return { events, composite, evaluated, skipped };
+  return { events, composite, prevScore: prev?.score ?? null, evaluated, skipped };
 }

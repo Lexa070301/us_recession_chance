@@ -45,6 +45,7 @@ plans:
 subscription:
   stars_per_30d: 150 # price in Telegram Stars (XTR)
   period_days: 30
+  refund_window_days: 7 # full self-service refund via /paysupport within this window
 
 # Pooled 12m-entry logit, fitted by `npm run fit-model` on 1983–2025
 # (McFadden R² ≈ 0.39, in-sample; recession & ≤12m post-recession months

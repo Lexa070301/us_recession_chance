@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { getChannelTargets, getConfig } from "../config/load.js";
+import { getConfig, getSignalDef } from "../config/load.js";
 import { getDb } from "../data/db.js";
 import {
   enqueueDelivery,
@@ -13,13 +13,12 @@ import { SEVERITY_ORDER } from "../data/repositories/signalState.js";
 import { getPrefs, listActiveUsers, setBlocked } from "../data/repositories/users.js";
 import type { CompositeResult } from "../signals/score.js";
 import { sendTelegramMessage } from "./adapters/telegram.js";
-import { renderSignalEvent } from "./render/templates.js";
+import { renderCompositeAlert, renderSignalEvent } from "./render/templates.js";
 
 /**
- * Route a SignalEvent to delivery targets and enqueue them:
- *  - every configured channel (one render per locale)
- *  - every active user whose prefs allow it and whose delivery_mode = instant
- * Digest-mode users are handled by the digest job instead.
+ * Route a SignalEvent to Plus users' DMs. Channels are digest-only now —
+ * instant transitions are a paid bot feature (see plans in model.yaml).
+ * Free/digest-mode users get events folded into their digests instead.
  */
 export function routeEvent(
   event: SignalEventRow,
@@ -30,27 +29,22 @@ export function routeEvent(
   const model = getConfig().model;
   let enqueued = 0;
 
-  for (const ch of getChannelTargets()) {
-    const text = renderSignalEvent(event, composite, ch.locale);
-    enqueueDelivery(
-      { eventId: event.id, targetType: "channel", targetId: ch.chatId, locale: ch.locale, payloadText: text },
-      db,
-    );
-    enqueued++;
-  }
-
   const newSeverity = SEVERITY_ORDER[event.to_state];
   const severityUp = newSeverity > SEVERITY_ORDER[event.from_state];
+  const isNowcast = getSignalDef(event.signal_key)?.block === "nowcast";
 
   for (const user of listActiveUsers(db)) {
+    if (user.plan !== "plus") continue;
     const prefs = getPrefs(user.tg_user_id, db);
-    if (prefs.enabled_signals && !prefs.enabled_signals.includes(event.signal_key)) continue;
+    if (prefs.delivery_mode !== "instant") continue;
+    if (isNowcast ? !prefs.nowcast_alerts : prefs.enabled_signals && !prefs.enabled_signals.includes(event.signal_key)) {
+      continue;
+    }
 
-    // free users can't go below the plan floor; plus users use their own pref
-    const floor =
-      user.plan === "plus"
-        ? SEVERITY_ORDER[prefs.min_severity]
-        : Math.max(SEVERITY_ORDER[prefs.min_severity], SEVERITY_ORDER[model.plans.free.min_severity_floor]);
+    const floor = Math.max(
+      SEVERITY_ORDER[prefs.min_severity],
+      SEVERITY_ORDER[model.plans.plus.min_severity_floor],
+    );
 
     // only escalate-or-new events are pushed instantly; downgrades go to digest
     const relevant =
@@ -58,14 +52,45 @@ export function routeEvent(
       (event.to_state === "ok" && SEVERITY_ORDER[event.from_state] >= floor);
     if (!relevant) continue;
 
-    if (prefs.delivery_mode === "instant") {
-      const text = renderSignalEvent(event, composite, user.locale);
-      enqueueDelivery(
-        { eventId: event.id, targetType: "dm", targetId: String(user.tg_user_id), locale: user.locale, payloadText: text },
-        db,
-      );
-      enqueued++;
-    }
+    const text = renderSignalEvent(event, composite, user.locale);
+    enqueueDelivery(
+      { eventId: event.id, targetType: "dm", targetId: String(user.tg_user_id), locale: user.locale, payloadText: text },
+      db,
+    );
+    enqueued++;
+  }
+  return enqueued;
+}
+
+/**
+ * Plus feature: DM users whose personal score threshold was crossed upward
+ * by the latest composite. Fires once per crossing — while the score stays
+ * above the threshold, prevScore >= threshold suppresses repeats.
+ */
+export function routeCompositeAlerts(
+  prevScore: number | null,
+  composite: CompositeResult,
+  conn?: Database.Database,
+): number {
+  if (prevScore === null) return 0;
+  const db = conn ?? getDb();
+  let enqueued = 0;
+  for (const user of listActiveUsers(db)) {
+    if (user.plan !== "plus") continue;
+    const prefs = getPrefs(user.tg_user_id, db);
+    const t = prefs.score_threshold;
+    if (t === null || t === undefined) continue;
+    if (prevScore >= t || composite.score < t) continue;
+    enqueueDelivery(
+      {
+        targetType: "dm",
+        targetId: String(user.tg_user_id),
+        locale: user.locale,
+        payloadText: renderCompositeAlert(composite, t, user.locale),
+      },
+      db,
+    );
+    enqueued++;
   }
   return enqueued;
 }

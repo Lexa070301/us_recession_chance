@@ -7,10 +7,15 @@ import {
 } from "../data/repositories/signalState.js";
 import { SEVERITY_ORDER, type SignalState } from "../data/repositories/signalState.js";
 import { getPrefs, getUser, savePrefs, setUserLocale } from "../data/repositories/users.js";
-import { getSubscription, isSubscriptionActive } from "../data/repositories/subscriptions.js";
+import {
+  getSubscription,
+  isSubscriptionActive,
+  listRefundablePayments,
+} from "../data/repositories/subscriptions.js";
 import { computeComposite } from "../signals/score.js";
 import { t } from "../publish/render/i18n.js";
-import { renderStatus } from "../publish/render/templates.js";
+import { renderAnalytics, renderStatus } from "../publish/render/templates.js";
+import { digestTimeMinutes } from "../jobs/digest.js";
 
 function locale(ctx: Context): string {
   const id = ctx.from?.id;
@@ -62,6 +67,40 @@ export async function cmdSignals(ctx: Context): Promise<void> {
   });
 }
 
+export async function cmdAnalytics(ctx: Context): Promise<void> {
+  const user = getUser(ctx.from!.id);
+  if (user?.plan !== "plus") {
+    await ctx.reply(t(locale(ctx), "bot.settings_plus_only"));
+    return;
+  }
+  await ctx.reply(renderAnalytics(getAllSignalStates(), locale(ctx)));
+}
+
+/** /digest HH:MM — custom daily digest time (UTC), /digest off resets. */
+export async function cmdDigest(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const user = getUser(ctx.from!.id);
+  if (user?.plan !== "plus") {
+    await ctx.reply(t(loc, "bot.settings_plus_only"));
+    return;
+  }
+  const arg = String(ctx.match ?? "").trim().toLowerCase();
+  const def = getConfig().channels.defaults.digest_time_utc;
+  if (arg === "off") {
+    savePrefs(ctx.from!.id, { digest_time: null });
+    await ctx.reply(t(loc, "bot.digest_time_reset", { default: def }));
+    return;
+  }
+  const norm = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(arg);
+  if (!norm || digestTimeMinutes(arg) === null) {
+    await ctx.reply(t(loc, "bot.digest_invalid"));
+    return;
+  }
+  const hhmm = `${norm[1].padStart(2, "0")}:${norm[2]}`;
+  savePrefs(ctx.from!.id, { digest_time: hhmm });
+  await ctx.reply(t(loc, "bot.digest_time_set", { time: hhmm }));
+}
+
 // ------------------------------------------------------------------
 // Keyboards
 // ------------------------------------------------------------------
@@ -69,6 +108,7 @@ export async function cmdSignals(ctx: Context): Promise<void> {
 function settingsKeyboard(ctx: Context): InlineKeyboard {
   const userId = ctx.from!.id;
   const prefs = getPrefs(userId);
+  const isPlus = getUser(userId)?.plan === "plus";
   const loc = locale(ctx);
   const kb = new InlineKeyboard();
 
@@ -84,6 +124,22 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
     `${t(loc, "bot.settings_min_severity")}: ${t(loc, `severity.${prefs.min_severity}`)} → ${t(loc, `severity.${nextSev}`)}`,
     "set:severity",
   ).row();
+
+  if (isPlus) {
+    kb.text(`${prefs.daily_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_daily_digest")}`, "set:digest_daily").row();
+    kb.text(`${prefs.weekly_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_weekly_digest")}`, "set:digest_weekly").row();
+    kb.text(`${prefs.nowcast_alerts ? "✅" : "⬜"} ${t(loc, "bot.settings_nowcast")}`, "set:nowcast").row();
+    kb.text(
+      `${t(loc, "bot.settings_score_alert")}: ${prefs.score_threshold ?? t(loc, "bot.settings_score_off")}`,
+      "set:score",
+    ).row();
+    kb.text(
+      `${t(loc, "bot.settings_digest_time")}: ${prefs.digest_time ?? getConfig().channels.defaults.digest_time_utc}`,
+      "set:digest_time",
+    ).row();
+  } else {
+    kb.text(t(loc, "bot.upgrade_hint"), "set:upgrade").row();
+  }
 
   kb.text(t(loc, "bot.settings_lang"), "set:lang_menu").row();
   return kb;
@@ -150,6 +206,56 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
     return;
   }
 
+  if (data === "set:digest_daily" || data === "set:digest_weekly" || data === "set:nowcast") {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    const prefs = getPrefs(userId);
+    const field =
+      data === "set:digest_daily"
+        ? "daily_digest"
+        : data === "set:digest_weekly"
+          ? "weekly_digest"
+          : "nowcast_alerts";
+    savePrefs(userId, { [field]: !prefs[field] });
+    await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_updated") });
+    await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(ctx) });
+    return;
+  }
+
+  if (data === "set:score") {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    const prefs = getPrefs(userId);
+    const cycle: (number | null)[] = [null, 3, 5, 7, 9, 13];
+    const idx = cycle.indexOf(prefs.score_threshold);
+    savePrefs(userId, { score_threshold: cycle[(idx + 1) % cycle.length] });
+    await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_updated") });
+    await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(ctx) });
+    return;
+  }
+
+  if (data === "set:digest_time") {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    await ctx.reply(
+      t(loc, "bot.digest_time_hint", { default: getConfig().channels.defaults.digest_time_utc }),
+    );
+    return;
+  }
+
+  if (data === "set:upgrade") {
+    await ctx.answerCallbackQuery();
+    await cmdPlan(ctx);
+    return;
+  }
+
   if (data === "set:lang_menu") {
     await ctx.answerCallbackQuery();
     const kb = new InlineKeyboard().text("English", "set:lang:en").text("Русский", "set:lang:ru");
@@ -188,7 +294,57 @@ export async function cmdPlan(ctx: Context): Promise<void> {
   });
 }
 
+// ------------------------------------------------------------------
+// Terms / payment support (required by Telegram bot-payments rules)
+// ------------------------------------------------------------------
+
+export async function cmdTerms(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const cfg = getConfig().model.subscription;
+  await ctx.reply(
+    t(loc, "bot.terms", {
+      stars: cfg.stars_per_30d,
+      days: cfg.period_days,
+      refund_days: cfg.refund_window_days,
+    }),
+  );
+}
+
+export async function cmdPaySupport(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const cfg = getConfig().model.subscription;
+  const payments = listRefundablePayments(ctx.from!.id, cfg.refund_window_days);
+
+  const kb = new InlineKeyboard();
+  for (const p of payments) {
+    kb.text(
+      t(loc, "bot.refund_item", { stars: p.stars_amount, date: p.paid_at.slice(0, 10) }),
+      `refund:req:${p.charge_id}`,
+    ).row();
+  }
+  const text =
+    t(loc, "bot.paysupport", { refund_days: cfg.refund_window_days, days: cfg.period_days }) +
+    (payments.length ? "" : `\n\n${t(loc, "bot.refund_none")}`);
+  await ctx.reply(text, { reply_markup: kb });
+}
+
+// ------------------------------------------------------------------
+// Buy flow: Telegram requires explicit ToS consent before the invoice
+// ------------------------------------------------------------------
+
 export async function onBuyPlus(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const cfg = getConfig().model.subscription;
+  await ctx.answerCallbackQuery();
+  await ctx.reply(t(loc, "bot.terms_consent"), {
+    reply_markup: new InlineKeyboard().text(
+      t(loc, "bot.pay_agree", { stars: cfg.stars_per_30d }),
+      "buy:plus:pay",
+    ),
+  });
+}
+
+export async function onPayInvoice(ctx: Context): Promise<void> {
   const loc = locale(ctx);
   const cfg = getConfig().model.subscription;
   await ctx.answerCallbackQuery();

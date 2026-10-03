@@ -35,13 +35,24 @@ composite:
   divergence_signals: "⚖️ Signals are triggered, but the macro model reads a weaker backdrop — treat an elevated score with care."
   base: "Unconditional base rate: {{base}}"
   nowcast_title: "⏱ Nowcast (already in recession?)"
+  threshold_alert: "📊 Score crossed your alert threshold {{threshold}}: {{score}} → {{bucket}} ({{prob}})"
   footer: "Informational data only — not investment advice."
 
 digest:
   title: "📋 Daily recession-signal digest — {{date}}"
+  title_weekly: "📋 Weekly recession-signal digest — {{date}}"
   no_changes: "No signal changes today. Composite: {{bucket}} ({{prob}})."
   section_events: "Signal changes:"
+  section_events_weekly: "Signal changes this week:"
   section_active: "Active signals:"
+  bot_promo: "🤖 @{{bot}} — instant alerts, custom score thresholds, nowcast signals & per-signal analytics (Plus)"
+
+analytics:
+  title: "📈 Signal analytics — state · value · hit rate"
+  forecast: "12-month forecast signals:"
+  nowcast: "Nowcast (onset detectors):"
+  lead: "lead"
+  insufficient: "limited history"
 
 bot:
   start: |
@@ -52,7 +63,11 @@ bot:
     /status — current signals & composite risk
     /signals — choose which signals to follow
     /settings — alerts, language, delivery
+    /analytics — per-signal statistics
+    /digest HH:MM — custom digest time
     /plan — subscription
+    /terms — terms of service
+    /paysupport — payment support
 
     ⚠️ Informational and educational data only — not investment advice. Historical frequencies do not guarantee future results.
   disclaimer_short: "Informational data only — not investment advice."
@@ -63,20 +78,60 @@ bot:
   delivery_digest: "Daily digest"
   settings_min_severity: "Minimum severity"
   settings_lang: "Language / Язык"
+  settings_daily_digest: "Daily digest"
+  settings_weekly_digest: "Weekly digest"
+  settings_nowcast: "Nowcast alerts"
+  settings_score_alert: "Score alert"
+  settings_score_off: "off"
+  settings_digest_time: "Digest time (UTC)"
+  digest_time_hint: "Send /digest HH:MM (UTC) to pick your time — /digest off restores the default {{default}}."
+  digest_time_set: "Digest time set to {{time}} UTC ✅"
+  digest_time_reset: "Digest time reset to default ({{default}} UTC)."
+  digest_invalid: "Format: /digest HH:MM (UTC), e.g. /digest 07:30 — or /digest off"
+  upgrade_hint: "🔓 Plus unlocks instant alerts, score threshold, nowcast & digest schedule — /plan"
   settings_updated: "Settings updated ✅"
   settings_plus_only: "🔒 Available on the Plus plan — /plan"
   signals_title: "📡 Signals (tap to toggle)"
   plan_title: "💎 Plus plan"
   plan_desc: |
     Plus includes:
-    • Instant alerts (not just daily digest)
-    • Watch-level signals
-    • Custom signal selection
+    • Instant transition & nowcast alerts (channels get digests only)
+    • Watch-level signals + custom signal selection
+    • Personal composite-score alert threshold
+    • /analytics — per-signal stats on demand
+    • Custom digest time; digests can be turned off
     Price: {{stars}} Stars / {{days}} days
   plan_invoice: "Plus subscription — {{days}} days"
   plan_active: "✅ Plus active until {{until}}"
   plan_thanks: "🎉 Thank you! Plus is active until {{until}}"
   plan_expired: "Your Plus subscription has expired. Switched to free digest mode."
+  terms: |
+    📜 Terms — Plus subscription
+
+    • Service: paid alerts and analytics on US recession indicators delivered in this bot. Informational and educational data only — not investment, financial or legal advice. Historical signal frequencies do not guarantee future results.
+    • Price: {{stars}} Stars per {{days}} days. Manual renewal — no auto-charges.
+    • Refunds: full refund within {{refund_days}} days of payment via /paysupport. A refund deducts {{days}} days from your remaining Plus time (Plus is canceled when none remains).
+    • Availability depends on external data (FRED) and Telegram — no uptime guarantee.
+    • Telegram is not a party to this purchase; Telegram support cannot help with payments in this bot.
+  terms_consent: "By paying you agree to the Terms — /terms"
+  pay_agree: "✅ Agree & pay {{stars}}⭐"
+  paysupport: |
+    💳 Payment support
+
+    Purchases are made in Telegram Stars — Telegram support cannot process refunds for this bot, only the developer can.
+
+    Policy: full refund within {{refund_days}} days of payment. A refund deducts {{days}} days from your remaining Plus time.
+
+    Tap a payment below to refund it:
+  refund_item: "↩️ Refund {{stars}}⭐ — {{date}}"
+  refund_none: "No refundable payments right now."
+  refund_confirm: "Refund {{stars}} Stars paid on {{date}}? {{days}} days will be deducted from your Plus time."
+  refund_yes: "✅ Refund {{stars}}⭐"
+  refund_no: "Cancel"
+  refund_done: "✅ {{stars}} Stars refunded. Plus active until {{until}}."
+  refund_done_canceled: "✅ {{stars}} Stars refunded — Plus is now canceled."
+  refund_failed: "❌ Refund failed — please try again later."
+  refund_unavailable: "This payment can no longer be refunded."
   error_generic: "Something went wrong, please try again later."
 
 signal:

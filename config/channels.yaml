@@ -15,3 +15,6 @@ defaults:
   supported_locales: [en, ru]
   fallback_locale: en
   digest_time_utc: "13:00"
+  # Weekly digest goes to channels + bot users (0 = Sunday).
+  weekly_digest_day_utc: 0
+  weekly_digest_time_utc: "13:00"

@@ -158,11 +158,15 @@ export function renderDigest(
   composite: CompositeResult,
   locale: string,
   date: string,
+  kind: "daily" | "weekly" = "daily",
+  botPromo?: string,
 ): string {
-  const lines: string[] = [t(locale, "digest.title", { date }), ""];
+  const titleKey = kind === "weekly" ? "digest.title_weekly" : "digest.title";
+  const eventsKey = kind === "weekly" ? "digest.section_events_weekly" : "digest.section_events";
+  const lines: string[] = [t(locale, titleKey, { date }), ""];
 
   if (events.length) {
-    lines.push(t(locale, "digest.section_events"));
+    lines.push(t(locale, eventsKey));
     for (const ev of events) {
       const def = getSignalDef(ev.signal_key);
       const name = def ? t(locale, `signal.${def.key}.name`) : ev.signal_key;
@@ -189,5 +193,62 @@ export function renderDigest(
 
   lines.push(t(locale, "composite.title"), compositeLine(composite, locale));
   lines.push("", t(locale, "bot.disclaimer_short"));
+  if (botPromo) lines.push("", t(locale, "digest.bot_promo", { bot: botPromo }));
+  return lines.join("\n");
+}
+
+/** Plus: composite score crossed the user's personal threshold upward. */
+export function renderCompositeAlert(
+  composite: CompositeResult,
+  threshold: number,
+  locale: string,
+): string {
+  return [
+    t(locale, "composite.threshold_alert", {
+      threshold,
+      score: composite.score.toFixed(1),
+      bucket: t(locale, `bucket.${composite.bucket}`),
+      prob: composite.probLabel,
+    }),
+    compositeLine(composite, locale),
+    "",
+    t(locale, "bot.disclaimer_short"),
+  ].join("\n");
+}
+
+/** Plus: per-signal detail — state, value, historical hit-rate, lead. */
+export function renderAnalytics(states: SignalStateRow[], locale: string): string {
+  const lines: string[] = [t(locale, "analytics.title"), ""];
+  const byKey = new Map(states.map((s) => [s.signal_key, s]));
+
+  const block = (label: string, defs: SignalDef[]) => {
+    if (!defs.length) return;
+    lines.push(label);
+    for (const def of defs) {
+      const st = byKey.get(def.key);
+      const state = st?.state ?? "ok";
+      const unit = getSeriesDef(def.input.key)?.unit;
+      let line = `${STATE_ICON[state]} ${t(locale, `signal.${def.key}.name`)} — ${t(locale, `severity.${state}`)}`;
+      if (st?.last_value !== null && st?.last_value !== undefined) {
+        line += ` · ${formatValue(st.last_value, unit)}`;
+      }
+      const h = def.hist;
+      if (h?.precision !== undefined && h.episodes !== undefined) {
+        line += ` — ${Math.round(h.precision * 100)}% (n=${h.episodes})`;
+        if (h.median_lead_months !== undefined && h.median_lead_months !== null) {
+          line += ` · ${t(locale, "analytics.lead")} ${h.median_lead_months}m`;
+        }
+      } else if (h?.insufficient_history) {
+        line += ` — ${t(locale, "analytics.insufficient")}`;
+      }
+      lines.push(line);
+    }
+    lines.push("");
+  };
+
+  const defs = getConfig().signals;
+  block(t(locale, "analytics.forecast"), defs.filter((d) => d.block !== "nowcast"));
+  block(t(locale, "analytics.nowcast"), defs.filter((d) => d.block === "nowcast"));
+  lines.push(t(locale, "bot.disclaimer_short"));
   return lines.join("\n");
 }

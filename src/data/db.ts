@@ -143,6 +143,17 @@ const MIGRATIONS: Migration[] = [
         WHERE digest_key IS NOT NULL;
     `,
   },
+  {
+    id: "0003_user_prefs_digest_plus",
+    sql: `
+      -- Plus-tier preferences: separate digest toggles, nowcast alerts,
+      -- personal composite-score alert threshold.
+      ALTER TABLE user_prefs ADD COLUMN daily_digest INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE user_prefs ADD COLUMN weekly_digest INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE user_prefs ADD COLUMN nowcast_alerts INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE user_prefs ADD COLUMN score_threshold REAL;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

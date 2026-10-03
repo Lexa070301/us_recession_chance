@@ -16,7 +16,7 @@
     "backfill": "tsx src/cli/backfill.ts",
     "check-signals": "tsx src/cli/checkSignals.ts",
     "send-test": "tsx src/cli/sendTest.ts",
-    "digest": "tsx -e \"import 'dotenv/config'; import { jobDigest } from './src/jobs/digest.ts'; jobDigest()\"",
+    "digest": "tsx -e \"import 'dotenv/config'; import { jobDigest, jobDigestAuto } from './src/jobs/digest.ts'; (process.argv[1] === 'weekly' ? jobDigest('weekly') : jobDigestAuto())\"",
     "backtest": "tsx scripts/backtest.ts",
     "fit-model": "tsx scripts/fitModel.ts",
     "backup": "tsx src/cli/backup.ts",

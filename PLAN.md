@@ -277,13 +277,17 @@ desc / hist / composite / disclaimer`.
 - [x] `adapters/telegram.ts`: sendMessage через grammY Api, fallback на plain
       text при ошибке парсинга.
 - [x] `cli/sendTest.ts`: тестовая отправка в каналы/чат.
-- [x] `jobs/digest.ts`: дайджест событий за 24ч + активные сигналы + композит.
+- [x] `jobs/digest.ts`: дайджесты daily (24ч) и weekly (168ч, ISO-week dedup),
+      кастомное время для plus через `jobCustomDigests` (каждые 15 мин).
+      Каналы получают ТОЛЬКО дайджесты (transitions убраны — это фича Plus),
+      в конце — промо-ссылка на бота (`BOT_USERNAME`).
 
 ### Phase 4 — Telegram-бот (per-user) ✅ DONE
 
 - [x] `bot/` на grammY: `/start` (дисклеймер), `/status`, `/signals`
-      (inline-toggle, plus only), `/settings` (delivery, severity, lang),
-      `/lang`, `/plan`.
+      (inline-toggle, plus only), `/settings` (delivery, severity, lang +
+      plus: digest toggles, nowcast, score threshold, digest time),
+      `/analytics` (plus), `/digest HH:MM` (plus), `/lang`, `/plan`.
 - [x] Middleware: upsert user + prefs, локаль из `language_code`; is_blocked
       при 403 обрабатывается в processDeliveries.
 - [x] DM-доставка: фильтры enabled_signals, min_severity, plan-floor
@@ -318,8 +322,10 @@ desc / hist / composite / disclaimer`.
 - [x] `bot/payments.ts`: `replyWithInvoice(currency=XTR)`,
       `pre_checkout_query`, `successful_payment` → `payments`,
       `subscriptions` (30 дней, продление при повторной оплате).
-- [x] Gating: free → digest + floor=warning; plus → instant + watch +
-      кастомный выбор сигналов (/signals).
+- [x] Gating v2: каналы и free-бот = только дайджесты; plus = мгновенные
+      переходы + nowcast-алерты + персональный порог скора
+      (`score_threshold`, алерт при пересечении вверх) + `/analytics` +
+      своё время дайджеста + отключение daily/weekly дайджестов.
 - [x] `jobs/subscriptions.ts`: экспирация → downgrade → уведомление (cron hourly).
 - [x] Дисклеймер в `/start`, футере сообщений, README.
 - [ ] E2E-проверка в тестовом окружении Stars + реальная оплата.

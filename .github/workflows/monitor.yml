@@ -49,12 +49,13 @@ jobs:
         run: |
           npx tsx -e "import 'dotenv/config'; import { jobFetch } from './src/jobs/fetch.ts'; import { jobCheckSignals } from './src/jobs/checkSignals.ts'; jobFetch().then(() => jobCheckSignals(true))"
 
-      - name: Daily digest (main daily run only)
+      - name: Digests (main daily run; weekly auto on its configured day)
         if: github.event.schedule == '20 13 * * *' || github.event_name == 'workflow_dispatch'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHANNEL_EN: ${{ secrets.TG_CHANNEL_EN }}
           TG_CHANNEL_RU: ${{ secrets.TG_CHANNEL_RU }}
+          BOT_USERNAME: ${{ vars.BOT_USERNAME }}
           DATABASE_PATH: ./data/recession.db
         run: |
-          npx tsx -e "import 'dotenv/config'; import { jobDigest } from './src/jobs/digest.ts'; jobDigest()"
+          npx tsx -e "import 'dotenv/config'; import { jobDigestAuto } from './src/jobs/digest.ts'; jobDigestAuto()"

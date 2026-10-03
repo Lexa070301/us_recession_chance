@@ -7,8 +7,9 @@ conditions, labor market, housing, composite indexes) from free public APIs —
 primarily FRED/ALFRED — evaluates a configurable signal engine, computes a
 composite 12-month recession risk estimate, and pushes localized alerts:
 
-- Telegram channels (multiple locales)
-- Telegram bot DMs with per-user thresholds and settings
+- Telegram channels (multiple locales) — daily + weekly digests only
+- Telegram bot DMs: free = digests; Plus = instant transition & nowcast
+  alerts, personal score threshold, per-signal analytics, custom digest time
 - Later: X/Twitter, email, other channels via a publisher abstraction
 
 Status: early development. See `PLAN.md` for the roadmap and `DEVLOG.md` for
@@ -62,8 +63,10 @@ Everything signal-related is declarative — no thresholds in code:
 `node-cron` inside the process (`MODE=scheduler|all`):
 
 - daily/weekly/monthly-quart fetches after typical FRED release windows
-- signal evaluation + transition alerts after each fetch
-- daily digest at `digest_time_utc`
+- signal evaluation + instant alerts to Plus users after each fetch
+- daily digest at `digest_time_utc`; weekly digest at
+  `weekly_digest_day_utc`/`weekly_digest_time_utc` (channels + users)
+- custom per-user digest times checked every 15 min (Plus)
 - delivery outbox retries every 15 min (max 5 attempts)
 - subscription expiry hourly; healthcheck 06:00 (admin DM on issues);
   weekly SQLite backup (keeps 14)

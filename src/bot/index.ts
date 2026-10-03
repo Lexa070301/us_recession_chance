@@ -2,16 +2,26 @@ import { Bot } from "grammy";
 import { getConfig } from "../config/load.js";
 import { upsertUser } from "../data/repositories/users.js";
 import {
+  cmdAnalytics,
+  cmdDigest,
   cmdLang,
+  cmdPaySupport,
   cmdPlan,
   cmdSettings,
   cmdSignals,
   cmdStart,
   cmdStatus,
+  cmdTerms,
   onBuyPlus,
   onCallbackQuery,
+  onPayInvoice,
 } from "./handlers.js";
-import { onPreCheckout, onSuccessfulPayment } from "./payments.js";
+import {
+  onPreCheckout,
+  onRefundConfirm,
+  onRefundRequest,
+  onSuccessfulPayment,
+} from "./payments.js";
 
 export function createBot(): Bot {
   const token = getConfig().env.telegramBotToken;
@@ -33,11 +43,33 @@ export function createBot(): Bot {
   bot.command("settings", cmdSettings);
   bot.command("lang", cmdLang);
   bot.command("signals", cmdSignals);
+  bot.command("analytics", cmdAnalytics);
+  bot.command("digest", cmdDigest);
   bot.command("plan", cmdPlan);
+  bot.command("terms", cmdTerms);
+  bot.command("paysupport", cmdPaySupport);
 
   bot.on("callback_query:data", async (ctx) => {
-    if (ctx.callbackQuery.data === "buy:plus") {
+    const data = ctx.callbackQuery.data;
+    if (data === "buy:plus") {
       await onBuyPlus(ctx);
+      return;
+    }
+    if (data === "buy:plus:pay") {
+      await onPayInvoice(ctx);
+      return;
+    }
+    if (data.startsWith("refund:req:")) {
+      await onRefundRequest(ctx, data.slice(11));
+      return;
+    }
+    if (data.startsWith("refund:yes:")) {
+      await onRefundConfirm(ctx, data.slice(11));
+      return;
+    }
+    if (data === "refund:no") {
+      await ctx.answerCallbackQuery();
+      await ctx.deleteMessage().catch(() => undefined);
       return;
     }
     await onCallbackQuery(ctx);

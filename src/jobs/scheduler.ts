@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { getConfig } from "../config/load.js";
 import { jobFetch } from "./fetch.js";
 import { jobCheckSignals } from "./checkSignals.js";
-import { jobDigest } from "./digest.js";
+import { jobDigest, jobDigestAuto, jobCustomDigests } from "./digest.js";
 import { jobExpireSubscriptions } from "./subscriptions.js";
 import { jobHealthcheck } from "./health.js";
 import { jobBackup } from "./backup.js";
@@ -18,8 +18,10 @@ const wrap = (name: string, fn: () => Promise<void>) => async () => {
 
 export function startScheduler(): void {
   const tz = getConfig().env.timezone;
-  const digestUtc = getConfig().channels.defaults.digest_time_utc; // "HH:MM"
+  const defs = getConfig().channels.defaults;
+  const digestUtc = defs.digest_time_utc; // "HH:MM"
   const [dh, dm] = digestUtc.split(":");
+  const [wh, wm] = defs.weekly_digest_time_utc.split(":");
 
   // Daily series: after FRED morning refresh and again in the evening UTC
   cron.schedule("15 14,21 * * *", wrap("daily", async () => {
@@ -40,8 +42,18 @@ export function startScheduler(): void {
     await jobCheckSignals(true);
   }), { timezone: tz });
 
-  // Daily digest for digest-mode users
-  cron.schedule(`${Number(dm)} ${Number(dh)} * * *`, wrap("digest", jobDigest), { timezone: tz });
+  // Daily digest for channels + users (+ weekly when it falls on this slot)
+  cron.schedule(`${Number(dm)} ${Number(dh)} * * *`, wrap("digest", jobDigestAuto), { timezone: tz });
+
+  // Weekly digest on its configured weekday/time (covers weekly_time > daily_time)
+  cron.schedule(
+    `${Number(wm)} ${Number(wh)} * * ${defs.weekly_digest_day_utc}`,
+    wrap("digest-weekly", async () => jobDigest("weekly")),
+    { timezone: tz },
+  );
+
+  // Plus users with a custom digest_time — checked every 15 min (dedup-safe)
+  cron.schedule("*/15 * * * *", wrap("digest-custom", jobCustomDigests), { timezone: tz });
 
   // Retry failed deliveries every 15 min
   cron.schedule("*/15 * * * *", wrap("deliveries", async () => {

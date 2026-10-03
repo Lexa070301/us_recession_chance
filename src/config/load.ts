@@ -32,6 +32,8 @@ export interface AppConfig {
     databasePath: string;
     timezone: string;
     logLevel: string;
+    /** Bot @username (without @) — used for the channel promo footer. */
+    botUsername?: string;
   };
 }
 
@@ -56,6 +58,7 @@ export function getConfig(): AppConfig {
       databasePath: process.env.DATABASE_PATH ?? "./data/recession.db",
       timezone: process.env.TIMEZONE ?? "UTC",
       logLevel: process.env.LOG_LEVEL ?? "info",
+      botUsername: process.env.BOT_USERNAME?.replace(/^@/, "") || undefined,
     },
   };
   return cached;

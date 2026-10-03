@@ -17,6 +17,14 @@ export interface UserPrefs {
   delivery_mode: "instant" | "digest";
   digest_time: string | null;
   quiet_hours: { from: number; to: number } | null;
+  /** Plus: receive the daily digest. */
+  daily_digest: boolean;
+  /** Plus: receive the weekly digest. */
+  weekly_digest: boolean;
+  /** Plus: push nowcast-signal transitions instantly. */
+  nowcast_alerts: boolean;
+  /** Plus: DM when the composite score crosses this value upward. */
+  score_threshold: number | null;
 }
 
 export function upsertUser(
@@ -68,6 +76,10 @@ export function getPrefs(tgUserId: number, conn?: Database.Database): UserPrefs 
         delivery_mode: string;
         digest_time: string | null;
         quiet_hours_json: string | null;
+        daily_digest: number;
+        weekly_digest: number;
+        nowcast_alerts: number;
+        score_threshold: number | null;
       }
     | undefined;
   return {
@@ -77,6 +89,10 @@ export function getPrefs(tgUserId: number, conn?: Database.Database): UserPrefs 
     delivery_mode: (row?.delivery_mode as UserPrefs["delivery_mode"]) ?? "digest",
     digest_time: row?.digest_time ?? null,
     quiet_hours: row?.quiet_hours_json ? (JSON.parse(row.quiet_hours_json) as UserPrefs["quiet_hours"]) : null,
+    daily_digest: row?.daily_digest !== 0,
+    weekly_digest: row?.weekly_digest !== 0,
+    nowcast_alerts: row?.nowcast_alerts !== 0,
+    score_threshold: row?.score_threshold ?? null,
   };
 }
 
@@ -86,7 +102,8 @@ export function savePrefs(tgUserId: number, prefs: Partial<UserPrefs>, conn?: Da
   const cur = getPrefs(tgUserId, db);
   const next = { ...cur, ...prefs };
   db.prepare(
-    `UPDATE user_prefs SET enabled_signals_json = ?, min_severity = ?, delivery_mode = ?, digest_time = ?, quiet_hours_json = ?
+    `UPDATE user_prefs SET enabled_signals_json = ?, min_severity = ?, delivery_mode = ?, digest_time = ?, quiet_hours_json = ?,
+       daily_digest = ?, weekly_digest = ?, nowcast_alerts = ?, score_threshold = ?
      WHERE user_id = ?`,
   ).run(
     next.enabled_signals ? JSON.stringify(next.enabled_signals) : null,
@@ -94,6 +111,10 @@ export function savePrefs(tgUserId: number, prefs: Partial<UserPrefs>, conn?: Da
     next.delivery_mode,
     next.digest_time,
     next.quiet_hours ? JSON.stringify(next.quiet_hours) : null,
+    next.daily_digest ? 1 : 0,
+    next.weekly_digest ? 1 : 0,
+    next.nowcast_alerts ? 1 : 0,
+    next.score_threshold,
     tgUserId,
   );
 }

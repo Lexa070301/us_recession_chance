@@ -2,6 +2,44 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-03 (implementation pass 5: tiered delivery rework)
+
+- Channels now receive digests only (daily 13:00 UTC + weekly on Sunday).
+  Instant transitions moved to Plus-only DMs — routeEvent no longer targets
+  channels; BOT_USERNAME env adds a promo footer to channel digests.
+- Plus prefs (migration 0003): daily_digest / weekly_digest toggles,
+  nowcast_alerts, score_threshold, digest_time.
+- New: /digest HH:MM custom time (jobCustomDigests every 15min, dedup via
+  digest_key d:/w: ISO week), /analytics per-signal stats,
+  routeCompositeAlerts fires once per upward threshold crossing.
+- EngineRun now returns prevScore for crossing detection.
+- test/publisher.test.ts: 6 tests covering plus-only instant, nowcast gate,
+  severity floor, enabled_signals, threshold crossing.
+
+## 2026-10-03 (implementation pass 4: payment compliance)
+
+### Implemented
+
+- **`/terms`** — localized ToS text (service scope, price, refund policy,
+  disclaimer). Telegram requires bot-paid users to see terms pre-purchase.
+- **ToS consent in buy flow** — `buy:plus` now shows a consent line + "Agree
+  & pay" button (`buy:plus:pay`) before the invoice is sent.
+- **`/paysupport` + self-service refunds** — lists payments inside
+  `subscription.refund_window_days` (model.yaml, default 7) with
+  confirm → `refundStarPayment` flow. `applyRefund` (atomic tx): marks
+  `payments.refund_at`, shortens `expires_at` by the payment's period, and
+  cancels + downgrades the plan when no paid time remains. Downgrade also
+  resets delivery_mode to digest.
+- Tests: 4 repo-level cases (window listing, shorten, cancel, idempotency).
+
+### Notes
+
+- Charge ids ride in callback_data (`refund:req:`/`refund:yes:`) — well
+  under the 64-byte limit for typical `telegram_payment_charge_id` values.
+- Refund policy chosen: full refund within 7 days, self-service. No admin
+  forwarding in /paysupport (kept text-only per decision).
+- Stars e2e still unverified — needs a real payment in the test env.
+
 ## 2026-10-03 (implementation pass 3: real-data E2E + calibration)
 
 ### Real-data run + fixes found by backtest

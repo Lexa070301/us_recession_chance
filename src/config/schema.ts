@@ -179,6 +179,8 @@ export const channelsConfigSchema = z.object({
     supported_locales: z.array(z.string()).min(1),
     fallback_locale: z.string(),
     digest_time_utc: z.string(),
+    weekly_digest_day_utc: z.number().int().min(0).max(6).default(0),
+    weekly_digest_time_utc: z.string().default("13:00"),
   }),
 });
 export type ChannelsConfig = z.infer<typeof channelsConfigSchema>;
@@ -212,6 +214,7 @@ export const modelConfigSchema = z.object({
   subscription: z.object({
     stars_per_30d: z.number().int(),
     period_days: z.number().int(),
+    refund_window_days: z.number().int().default(7),
   }),
   // Fitted by scripts/fitModel.ts — optional until reviewed & wired in.
   pooled_logit: z

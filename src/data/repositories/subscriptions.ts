@@ -41,6 +41,87 @@ export function activateSubscription(
   tx();
 }
 
+export interface PaymentRow {
+  charge_id: string;
+  user_id: number;
+  stars_amount: number;
+  period_days: number;
+  paid_at: string;
+  refund_at: string | null;
+}
+
+export function getPayment(chargeId: string, conn?: Database.Database): PaymentRow | undefined {
+  const db = conn ?? getDb();
+  return db.prepare("SELECT * FROM payments WHERE charge_id = ?").get(chargeId) as
+    | PaymentRow
+    | undefined;
+}
+
+/** Payments eligible for self-service refund: not refunded, inside the window. */
+export function listRefundablePayments(
+  userId: number,
+  windowDays: number,
+  conn?: Database.Database,
+): PaymentRow[] {
+  const db = conn ?? getDb();
+  return db
+    .prepare(
+      `SELECT * FROM payments
+       WHERE user_id = ? AND refund_at IS NULL
+         AND paid_at >= datetime('now', ?)
+       ORDER BY paid_at DESC`,
+    )
+    .all(userId, `-${windowDays} days`) as PaymentRow[];
+}
+
+/**
+ * Refund bookkeeping: marks the payment refunded and shortens the active
+ * subscription by the payment's period (each payment bought period_days).
+ * Cancels the plan when no paid time remains. Atomic.
+ */
+export function applyRefund(
+  chargeId: string,
+  conn?: Database.Database,
+): { expiresAt: string | null } | "already_refunded" | "unknown" {
+  const db = conn ?? getDb();
+  return db.transaction(() => {
+    const marked = db
+      .prepare(
+        `UPDATE payments SET refund_at = datetime('now')
+         WHERE charge_id = ? AND refund_at IS NULL`,
+      )
+      .run(chargeId);
+    if (marked.changes === 0) {
+      return db.prepare("SELECT 1 AS x FROM payments WHERE charge_id = ?").get(chargeId)
+        ? ("already_refunded" as const)
+        : ("unknown" as const);
+    }
+    const pay = db
+      .prepare("SELECT user_id, period_days FROM payments WHERE charge_id = ?")
+      .get(chargeId) as { user_id: number; period_days: number };
+    const sub = db
+      .prepare("SELECT 1 AS x FROM subscriptions WHERE user_id = ? AND status = 'active'")
+      .get(pay.user_id);
+    if (!sub) return { expiresAt: null };
+
+    db.prepare("UPDATE subscriptions SET expires_at = datetime(expires_at, ?) WHERE user_id = ?").run(
+      `-${pay.period_days} days`,
+      pay.user_id,
+    );
+    const row = db
+      .prepare(
+        "SELECT expires_at, expires_at <= datetime('now') AS due FROM subscriptions WHERE user_id = ?",
+      )
+      .get(pay.user_id) as { expires_at: string; due: number };
+    if (row.due) {
+      db.prepare("UPDATE subscriptions SET status = 'canceled' WHERE user_id = ?").run(pay.user_id);
+      setUserPlan(pay.user_id, "free", db);
+      return { expiresAt: null };
+    }
+    return { expiresAt: row.expires_at };
+  })();
+}
+
 export function getSubscription(
   userId: number,
   conn?: Database.Database,
