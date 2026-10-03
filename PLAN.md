@@ -340,8 +340,9 @@ desc / hist / composite / disclaimer`.
 - [x] Деплой: `ecosystem.config.cjs` (pm2), секция Deployment в README.
 - [ ] Release-awareness: повторный fetch через N часов при отсутствии новых
       данных (сейчас: фиксированные дни месяца — компромисс v1).
-- [ ] GitHub Actions cron для fetch+post (только каналы; боту нужен
-      long-running процесс).
+- [x] `.github/workflows/monitor.yml`: GHA cron channel-only режим
+      (fetch+signals+digest, SQLite через actions/cache); боту нужен
+      long-running процесс (pm2).
 
 ### Later (не сейчас)
 

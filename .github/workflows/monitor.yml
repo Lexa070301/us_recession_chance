@@ -1,0 +1,59 @@
+name: recession-monitor
+
+# Channel-only mode: fetch FRED → evaluate → post to channels.
+# The bot itself (commands/payments) needs a long-running process — use pm2
+# on a VPS for that; this workflow covers the one-way publishing path.
+# SQLite persists between runs via actions/cache (restore on miss is fine —
+# fetch is incremental and engine dedupes on state).
+
+on:
+  schedule:
+    - cron: "20 13 * * *" # main daily run (followed by digest)
+    - cron: "20 21 * * *" # evening refetch
+    - cron: "25 15 * * 3,4,5" # weekly series release days (Wed–Fri)
+    - cron: "35 15 2,7,12,17,22,27 * *" # monthly/quarterly release days
+  workflow_dispatch:
+
+permissions:
+  contents: none
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: recession-db-${{ github.run_id }}
+          restore-keys: recession-db-
+
+      - name: Fetch + evaluate + publish
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHANNEL_EN: ${{ secrets.TG_CHANNEL_EN }}
+          TG_CHANNEL_RU: ${{ secrets.TG_CHANNEL_RU }}
+          DATABASE_PATH: ./data/recession.db
+        run: |
+          npx tsx -e "import 'dotenv/config'; import { jobFetch } from './src/jobs/fetch.ts'; import { jobCheckSignals } from './src/jobs/checkSignals.ts'; jobFetch().then(() => jobCheckSignals(true))"
+
+      - name: Daily digest (main daily run only)
+        if: github.event.schedule == '20 13 * * *' || github.event_name == 'workflow_dispatch'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHANNEL_EN: ${{ secrets.TG_CHANNEL_EN }}
+          TG_CHANNEL_RU: ${{ secrets.TG_CHANNEL_RU }}
+          DATABASE_PATH: ./data/recession.db
+        run: |
+          npx tsx -e "import 'dotenv/config'; import { jobDigest } from './src/jobs/digest.ts'; jobDigest()"
