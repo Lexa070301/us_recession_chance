@@ -70,18 +70,29 @@ Everything signal-related is declarative — no thresholds in code:
 
 ## Deployment
 
-pm2 (recommended for a small VPS):
+pm2 (recommended for a small VPS / home server):
 
 ```bash
 npm ci && npm run build
 pm2 start ecosystem.config.cjs
-pm2 save
+pm2 save && pm2 startup   # systemd auto-boot (follow the printed command)
 ```
 
-Set `FRED_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TG_CHANNEL_*` in `.env`.
+Set `FRED_API_KEY`, `TELEGRAM_BOT_TOKEN` in `.env`. `TG_CHANNEL_*` is
+optional here — channels are only added to the delivery list when their env
+vars are set (`getChannelTargets`). To let GitHub Actions own channel posts
+and keep the bot on DM duty, omit `TG_CHANNEL_*` on the server.
+
+Update to a new version:
+
+```bash
+git pull && npm ci && npm run build && pm2 restart recession-monitor
+```
+
 Data lives in `DATABASE_PATH` (default `./data/recession.db`, WAL mode);
 backups land in `data/backups/`.
 
 Optional channel-only alternative: run `npm run backfill` +
 `npm run check-signals` + `npm run digest` from GitHub Actions cron —
-no server needed, but no bot interactions then.
+no server needed, but no bot interactions then. Requires the repo secrets
+`FRED_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TG_CHANNEL_EN`, `TG_CHANNEL_RU`.
