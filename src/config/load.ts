@@ -34,6 +34,8 @@ export interface AppConfig {
     logLevel: string;
     /** Bot @username (without @) — used for the channel promo footer. */
     botUsername?: string;
+    /** Telegram DC: "test" routes the bot API to the test environment (free Stars). */
+    tgEnv: "prod" | "test";
   };
 }
 
@@ -47,6 +49,14 @@ export function getConfig(): AppConfig {
   const channelsCfg = loadYaml("channels.yaml", channelsConfigSchema);
   const modelCfg = loadYaml("model.yaml", modelConfigSchema);
 
+  // Dev only: cheap production smoke test (min Telegram price is 1 Star).
+  const starsOverride = Number(process.env.STARS_PER_30D);
+  if (Number.isInteger(starsOverride) && starsOverride > 0) {
+    const base =
+      modelCfg.subscription.tiers.find((t) => t.days === 30) ?? modelCfg.subscription.tiers[0];
+    if (base) base.stars = starsOverride;
+  }
+
   cached = {
     sources: sourcesCfg,
     signals: signalsCfg.signals,
@@ -59,6 +69,7 @@ export function getConfig(): AppConfig {
       timezone: process.env.TIMEZONE ?? "UTC",
       logLevel: process.env.LOG_LEVEL ?? "info",
       botUsername: process.env.BOT_USERNAME?.replace(/^@/, "") || undefined,
+      tgEnv: process.env.TG_ENV === "test" ? "test" : "prod",
     },
   };
   return cached;

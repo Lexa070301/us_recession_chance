@@ -212,8 +212,9 @@ export const modelConfigSchema = z.object({
     }),
   }),
   subscription: z.object({
-    stars_per_30d: z.number().int(),
-    period_days: z.number().int(),
+    tiers: z
+      .array(z.object({ days: z.number().int().positive(), stars: z.number().int().positive() }))
+      .min(1),
     refund_window_days: z.number().int().default(7),
   }),
   // Fitted by scripts/fitModel.ts — optional until reviewed & wired in.

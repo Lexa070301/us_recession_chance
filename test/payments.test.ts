@@ -8,6 +8,7 @@ import {
   recordPayment,
 } from "../src/data/repositories/subscriptions.js";
 import { getUser, upsertUser } from "../src/data/repositories/users.js";
+import { findTier, parseInvoicePayload } from "../src/bot/payments.js";
 
 const pay = (userId: number, chargeId: string) => {
   recordPayment(chargeId, userId, 150, 30);
@@ -66,5 +67,24 @@ describe("refunds", () => {
     expect(applyRefund("c1")).toBe("already_refunded");
     expect(applyRefund("nope")).toBe("unknown");
     expect(listRefundablePayments(1, 7)).toHaveLength(0);
+  });
+});
+
+describe("invoice payload & tiers", () => {
+  it("parses plus:<days>:<uid>:<ts>", () => {
+    expect(parseInvoicePayload("plus:90:12345:1699999999999")).toEqual({
+      days: 90,
+      userId: 12345,
+    });
+    expect(parseInvoicePayload("plus_12345_1699999999999")).toBeNull(); // legacy fmt
+    expect(parseInvoicePayload("plus:abc:1:2")).toBeNull();
+    expect(parseInvoicePayload("garbage")).toBeNull();
+  });
+
+  it("resolves configured tiers only", () => {
+    expect(findTier(30)?.stars).toBe(150);
+    expect(findTier(90)?.stars).toBe(350);
+    expect(findTier(365)?.stars).toBe(1200);
+    expect(findTier(31)).toBeUndefined(); // unlisted period → reject
   });
 });

@@ -24,10 +24,11 @@ import {
 } from "./payments.js";
 
 export function createBot(): Bot {
-  const token = getConfig().env.telegramBotToken;
-  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not set (see .env.example)");
+  const env = getConfig().env;
+  if (!env.telegramBotToken) throw new Error("TELEGRAM_BOT_TOKEN is not set (see .env.example)");
 
-  const bot = new Bot(token);
+  // TG_ENV=test → Telegram test DC (free Stars; needs a test-env bot token)
+  const bot = new Bot(env.telegramBotToken, { client: { environment: env.tgEnv } });
 
   // Track every interacting user (idempotent)
   bot.use(async (ctx, next) => {
@@ -51,12 +52,17 @@ export function createBot(): Bot {
 
   bot.on("callback_query:data", async (ctx) => {
     const data = ctx.callbackQuery.data;
-    if (data === "buy:plus") {
-      await onBuyPlus(ctx);
+    if (data.startsWith("buy:plus:pay:")) {
+      await onPayInvoice(ctx, Number(data.slice(13)));
       return;
     }
-    if (data === "buy:plus:pay") {
-      await onPayInvoice(ctx);
+    if (data.startsWith("buy:plus:")) {
+      await onBuyPlus(ctx, Number(data.slice(9)));
+      return;
+    }
+    if (data === "buy:plus") {
+      const base = getConfig().model.subscription.tiers.find((t) => t.days === 30);
+      await onBuyPlus(ctx, base?.days ?? getConfig().model.subscription.tiers[0].days);
       return;
     }
     if (data.startsWith("refund:req:")) {

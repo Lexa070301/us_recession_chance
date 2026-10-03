@@ -12,6 +12,7 @@ import {
   isSubscriptionActive,
   listRefundablePayments,
 } from "../data/repositories/subscriptions.js";
+import { findTier } from "./payments.js";
 import { computeComposite } from "../signals/score.js";
 import { t } from "../publish/render/i18n.js";
 import { renderAnalytics, renderStatus } from "../publish/render/templates.js";
@@ -281,7 +282,7 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
 export async function cmdPlan(ctx: Context): Promise<void> {
   const loc = locale(ctx);
   const userId = ctx.from!.id;
-  const cfg = getConfig().model.subscription;
+  const tiers = getConfig().model.subscription.tiers;
 
   if (isSubscriptionActive(userId)) {
     const until = getSubscription(userId)?.expires_at?.slice(0, 10) ?? "";
@@ -289,9 +290,16 @@ export async function cmdPlan(ctx: Context): Promise<void> {
     return;
   }
 
-  await ctx.reply(t(loc, "bot.plan_desc", { stars: cfg.stars_per_30d, days: cfg.period_days }), {
-    reply_markup: new InlineKeyboard().text(`💎 ${cfg.stars_per_30d} ⭐`, "buy:plus"),
-  });
+  const base = tiers.find((tier) => tier.days === 30) ?? tiers[0];
+  const baseRate = base.stars / base.days;
+  const kb = new InlineKeyboard();
+  for (const tier of tiers) {
+    const pct = Math.round((1 - tier.stars / tier.days / baseRate) * 100);
+    const key = pct > 0 ? "bot.plan_tier_disc" : "bot.plan_tier";
+    kb.text(t(loc, key, { days: tier.days, stars: tier.stars, pct }), `buy:plus:${tier.days}`).row();
+  }
+
+  await ctx.reply(t(loc, "bot.plan_desc"), { reply_markup: kb });
 }
 
 // ------------------------------------------------------------------
@@ -301,13 +309,7 @@ export async function cmdPlan(ctx: Context): Promise<void> {
 export async function cmdTerms(ctx: Context): Promise<void> {
   const loc = locale(ctx);
   const cfg = getConfig().model.subscription;
-  await ctx.reply(
-    t(loc, "bot.terms", {
-      stars: cfg.stars_per_30d,
-      days: cfg.period_days,
-      refund_days: cfg.refund_window_days,
-    }),
-  );
+  await ctx.reply(t(loc, "bot.terms", { refund_days: cfg.refund_window_days }));
 }
 
 export async function cmdPaySupport(ctx: Context): Promise<void> {
@@ -323,7 +325,7 @@ export async function cmdPaySupport(ctx: Context): Promise<void> {
     ).row();
   }
   const text =
-    t(loc, "bot.paysupport", { refund_days: cfg.refund_window_days, days: cfg.period_days }) +
+    t(loc, "bot.paysupport", { refund_days: cfg.refund_window_days }) +
     (payments.length ? "" : `\n\n${t(loc, "bot.refund_none")}`);
   await ctx.reply(text, { reply_markup: kb });
 }
@@ -332,28 +334,36 @@ export async function cmdPaySupport(ctx: Context): Promise<void> {
 // Buy flow: Telegram requires explicit ToS consent before the invoice
 // ------------------------------------------------------------------
 
-export async function onBuyPlus(ctx: Context): Promise<void> {
+export async function onBuyPlus(ctx: Context, days: number): Promise<void> {
   const loc = locale(ctx);
-  const cfg = getConfig().model.subscription;
+  const tier = findTier(days);
+  if (!tier) {
+    await ctx.answerCallbackQuery({ text: t(loc, "bot.error_generic"), show_alert: true });
+    return;
+  }
   await ctx.answerCallbackQuery();
   await ctx.reply(t(loc, "bot.terms_consent"), {
     reply_markup: new InlineKeyboard().text(
-      t(loc, "bot.pay_agree", { stars: cfg.stars_per_30d }),
-      "buy:plus:pay",
+      t(loc, "bot.pay_agree", { stars: tier.stars }),
+      `buy:plus:pay:${tier.days}`,
     ),
   });
 }
 
-export async function onPayInvoice(ctx: Context): Promise<void> {
+export async function onPayInvoice(ctx: Context, days: number): Promise<void> {
   const loc = locale(ctx);
-  const cfg = getConfig().model.subscription;
+  const tier = findTier(days);
+  if (!tier) {
+    await ctx.answerCallbackQuery({ text: t(loc, "bot.error_generic"), show_alert: true });
+    return;
+  }
   await ctx.answerCallbackQuery();
   await ctx.replyWithInvoice(
     t(loc, "bot.plan_title"),
-    t(loc, "bot.plan_invoice", { days: cfg.period_days }),
-    `plus_${ctx.from!.id}_${Date.now()}`,
+    t(loc, "bot.plan_invoice", { days: tier.days }),
+    `plus:${tier.days}:${ctx.from!.id}:${Date.now()}`,
     "XTR",
-    [{ label: t(loc, "bot.plan_title"), amount: cfg.stars_per_30d }],
+    [{ label: t(loc, "bot.plan_title"), amount: tier.stars }],
     { provider_token: "" },
   );
 }

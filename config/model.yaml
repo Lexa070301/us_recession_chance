@@ -43,9 +43,11 @@ plans:
     min_severity_floor: watch
 
 subscription:
-  stars_per_30d: 150 # price in Telegram Stars (XTR)
-  period_days: 30
   refund_window_days: 7 # full self-service refund via /paysupport within this window
+  tiers: # price in Telegram Stars (XTR); longer = discounted
+    - { days: 30, stars: 150 }
+    - { days: 90, stars: 350 } # -22% vs 30d rate
+    - { days: 365, stars: 1200 } # -33% vs 30d rate
 
 # Pooled 12m-entry logit, fitted by `npm run fit-model` on 1983–2025
 # (McFadden R² ≈ 0.39, in-sample; recession & ≤12m post-recession months

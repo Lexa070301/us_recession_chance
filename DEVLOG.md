@@ -2,6 +2,41 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 7: multi-tier plans)
+
+### Implemented
+
+- `subscription.tiers` replaces `stars_per_30d`/`period_days`:
+  `{days:30,stars:150}`, `{days:90,stars:350}`, `{days:365,stars:1200}`.
+- `/plan` renders one button per tier (with discount % vs the 30-day rate);
+  ToS consent now carries the tier (`bot.tier_agree`,
+  callback `buy:plus:pay:<days>`).
+- Invoice payload = `plus:<days>:<uid>:<ts>`; `successful_payment` parses it
+  via `parseInvoicePayload`, resolves the tier via `findTier`, and rejects
+  payments whose `total_amount` doesn't match the configured tier price —
+  forged payloads can't buy long periods cheaply.
+- Refunds stay per-payment (`period_days` column already), so any tier
+  refunds correctly.
+- `STARS_PER_30D` override now applies only to the 30-day tier.
+
+## 2026-10-03 (implementation pass 6: payments dev-tooling)
+
+### Implemented (3-level Stars testing strategy)
+
+- **No-Telegram level**: `npm run devsub` (`src/cli/devSubscription.ts`) —
+  `grant <id> [days]` (synthetic `dev_*` payment + activateSubscription +
+  instant mode, mirrors successful_payment), `refund <charge_id>` (applyRefund
+  only — no API), `expire <id>` (marks sub due → run expiry job to finish),
+  `status <id>` (user+prefs+sub+payments dump). Verified on a temp DB.
+- **Test-env level**: `TG_ENV=test` → `createBot` passes
+  `client.environment: "test"` to grammY (test DC, free Stars). Needs a
+  separate bot token from @BotFather inside the test environment.
+- **Prod-smoke level**: `STARS_PER_30D` env overrides
+  `model.subscription.stars_per_30d` at load (min real price = 1 Star;
+  self-refund via /paysupport).
+- `.env.example` documents TG_ENV + STARS_PER_30D; README got a
+  "Testing Stars payments" section.
+
 ## 2026-10-03 (implementation pass 5: tiered delivery rework)
 
 - Channels now receive digests only (daily 13:00 UTC + weekly on Sunday).

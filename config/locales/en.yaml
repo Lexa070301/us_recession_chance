@@ -100,8 +100,10 @@ bot:
     • Personal composite-score alert threshold
     • /analytics — per-signal stats on demand
     • Custom digest time; digests can be turned off
-    Price: {{stars}} Stars / {{days}} days
+    Choose a period:
   plan_invoice: "Plus subscription — {{days}} days"
+  plan_tier: "💎 {{stars}} ⭐ — {{days}} days"
+  plan_tier_disc: "💎 {{stars}} ⭐ — {{days}} days (−{{pct}}%)"
   plan_active: "✅ Plus active until {{until}}"
   plan_thanks: "🎉 Thank you! Plus is active until {{until}}"
   plan_expired: "Your Plus subscription has expired. Switched to free digest mode."
@@ -109,8 +111,8 @@ bot:
     📜 Terms — Plus subscription
 
     • Service: paid alerts and analytics on US recession indicators delivered in this bot. Informational and educational data only — not investment, financial or legal advice. Historical signal frequencies do not guarantee future results.
-    • Price: {{stars}} Stars per {{days}} days. Manual renewal — no auto-charges.
-    • Refunds: full refund within {{refund_days}} days of payment via /paysupport. A refund deducts {{days}} days from your remaining Plus time (Plus is canceled when none remains).
+    • Price: per the selected plan, shown before payment. Manual renewal — no auto-charges.
+    • Refunds: full refund within {{refund_days}} days of payment via /paysupport. A refund deducts the purchased period from your remaining Plus time (Plus is canceled when none remains).
     • Availability depends on external data (FRED) and Telegram — no uptime guarantee.
     • Telegram is not a party to this purchase; Telegram support cannot help with payments in this bot.
   terms_consent: "By paying you agree to the Terms — /terms"
@@ -120,7 +122,7 @@ bot:
 
     Purchases are made in Telegram Stars — Telegram support cannot process refunds for this bot, only the developer can.
 
-    Policy: full refund within {{refund_days}} days of payment. A refund deducts {{days}} days from your remaining Plus time.
+    Policy: full refund within {{refund_days}} days of payment. A refund deducts the purchased period from your remaining Plus time.
 
     Tap a payment below to refund it:
   refund_item: "↩️ Refund {{stars}}⭐ — {{date}}"

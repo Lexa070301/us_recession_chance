@@ -32,19 +32,20 @@ npm run dev            # MODE=all: bot + scheduler
 
 ## Commands
 
-| Command                          | What it does                                             |
-| -------------------------------- | -------------------------------------------------------- |
-| `npm run dev`                    | Run app (MODE=bot\|scheduler\|all, default all)          |
-| `npm run build` / `npm start`    | Compile to `dist/` / run compiled app                    |
-| `npm run typecheck` / `npm test` | `tsc --noEmit` / vitest                                  |
-| `npm run backfill -- <years>`    | Fetch history for all FRED series                        |
-| `npm run check-signals`          | Evaluate signals + composite (dry run)                   |
-| `npm run send-test`              | Send a test message to configured channels               |
-| `npm run digest`                 | Build + send the daily digest once                       |
-| `npm run backtest`               | Replay signals vs NBER recessions; calibrate score bands |
-| `npm run fit-model`              | Fit pooled 12m logit; print coefs + YAML for model.yaml  |
-| `npm run backup`                 | Online SQLite backup to `data/backups/`                  |
-| `npm run health`                 | One-off healthcheck report                               |
+| Command                          | What it does                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`                    | Run app (MODE=bot\|scheduler\|all, default all)                              |
+| `npm run build` / `npm start`    | Compile to `dist/` / run compiled app                                        |
+| `npm run typecheck` / `npm test` | `tsc --noEmit` / vitest                                                      |
+| `npm run backfill -- <years>`    | Fetch history for all FRED series                                            |
+| `npm run check-signals`          | Evaluate signals + composite (dry run)                                       |
+| `npm run send-test`              | Send a test message to configured channels                                   |
+| `npm run devsub -- <cmd> [args]` | Dev subscription lifecycle: `grant`/`refund`/`expire`/`status` (no Telegram) |
+| `npm run digest`                 | Build + send the daily digest once                                           |
+| `npm run backtest`               | Replay signals vs NBER recessions; calibrate score bands                     |
+| `npm run fit-model`              | Fit pooled 12m logit; print coefs + YAML for model.yaml                      |
+| `npm run backup`                 | Online SQLite backup to `data/backups/`                                      |
+| `npm run health`                 | One-off healthcheck report                                                   |
 
 ## Configuration
 
@@ -55,7 +56,7 @@ Everything signal-related is declarative — no thresholds in code:
   composite weight, static `hist:` stats (see `scripts/histStats.md`).
 - `config/channels.yaml` — locale → chat env mapping, digest time.
 - `config/model.yaml` — NY-Fed probit coefs, composite score bands,
-  free/plus gating, Stars pricing; `pooled_logit` from `fit-model`.
+  free/plus gating, Stars `subscription.tiers` (30/90/365-day plans); `pooled_logit` from `fit-model`.
 - `config/locales/*.yaml` — message templates per locale.
 
 ## Scheduling
@@ -70,6 +71,21 @@ Everything signal-related is declarative — no thresholds in code:
 - delivery outbox retries every 15 min (max 5 attempts)
 - subscription expiry hourly; healthcheck 06:00 (admin DM on issues);
   weekly SQLite backup (keeps 14)
+
+## Testing Stars payments
+
+Three levels, cheapest first:
+
+1. **No Telegram** — `npm run devsub -- grant <tg_user_id> [days]` writes a
+   synthetic payment + activates Plus directly in the DB (mirrors
+   `successful_payment`). `refund`/`expire`/`status` cover the rest of the
+   lifecycle. Tests gating, prefs, digests, expiry.
+2. **Full payment flow** — Telegram test environment: create a separate bot
+   via @BotFather _inside_ the test env, put its token in
+   `TELEGRAM_BOT_TOKEN`, set `TG_ENV=test` (grammY then uses the test DC).
+   Stars purchases are free; invoice → payment → /paysupport refund all work.
+3. **Production smoke** — set `STARS_PER_30D=1` (overrides the 30-day tier
+   price), buy that tier, self-refund via /paysupport.
 
 ## Deployment
 

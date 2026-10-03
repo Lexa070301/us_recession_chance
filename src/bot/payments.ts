@@ -17,6 +17,16 @@ function locale(ctx: Context): string {
   return getUser(id)?.locale ?? getConfig().channels.defaults.fallback_locale;
 }
 
+/** Invoice payload: `plus:<days>:<userId>:<ts>` — days selects the tier. */
+export function parseInvoicePayload(payload: string): { days: number; userId: number } | null {
+  const m = /^plus:(\d+):(\d+):(\d+)$/.exec(payload);
+  return m ? { days: Number(m[1]), userId: Number(m[2]) } : null;
+}
+
+export function findTier(days: number): { days: number; stars: number } | undefined {
+  return getConfig().model.subscription.tiers.find((tier) => tier.days === days);
+}
+
 export async function onPreCheckout(ctx: Context): Promise<void> {
   await ctx.answerPreCheckoutQuery(true);
 }
@@ -26,16 +36,29 @@ export async function onSuccessfulPayment(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!payment || !userId) return;
 
-  const cfg = getConfig().model.subscription;
-  const chargeId = payment.telegram_payment_charge_id;
+  // Never trust the client-sent payload: resolve the tier ourselves and
+  // require the charged amount to match the configured price.
+  const parsed = parseInvoicePayload(payment.invoice_payload);
+  const tier = parsed ? findTier(parsed.days) : undefined;
+  if (
+    !parsed ||
+    parsed.userId !== userId ||
+    !tier ||
+    payment.total_amount !== tier.stars ||
+    payment.currency !== "XTR"
+  ) {
+    console.error("unexpected successful_payment:", JSON.stringify(payment));
+    return;
+  }
 
-  recordPayment(chargeId, userId, payment.total_amount, cfg.period_days);
-  activateSubscription(userId, cfg.period_days, chargeId);
+  const chargeId = payment.telegram_payment_charge_id;
+  recordPayment(chargeId, userId, tier.stars, tier.days);
+  activateSubscription(userId, tier.days, chargeId);
   // upgrade UX: switch to instant delivery by default
   savePrefs(userId, { delivery_mode: "instant" });
 
   const locale = getUser(userId)?.locale ?? "en";
-  const until = new Date(Date.now() + cfg.period_days * 86_400_000).toISOString().slice(0, 10);
+  const until = new Date(Date.now() + tier.days * 86_400_000).toISOString().slice(0, 10);
   await ctx.reply(t(locale, "bot.plan_thanks", { until }));
 }
 
