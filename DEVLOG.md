@@ -2,6 +2,63 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 9: independent audit fixes)
+
+Independent audit verified against code; fixed items below.
+
+### Fixed (high)
+
+- **`levels` hysteresis was dead code**: exit_below/exit_above could only
+  early-return `ok`. `evaluate()` now takes the previous state
+  (`PrevEvalState`); dead band between exit and trigger holds the stored
+  state. Engine passes `{state, since}` from signal_state; `replaySignal`
+  threads prev across eval points. Affects 9 signals (nfci, stlfsi, nyfed,
+  sloos, cfnaid, sahm, chauvet + hy/bbb via any_of) — kills watch↔ok flaps.
+- **`yoy` computed absolute diff while thresholds meant %**: now
+  `(v/prev−1)·100`. Bug hit `permits_decline` (critical −10) and
+  `housing_starts_decline` (warn −10). Re-measured: permits precision
+  0.11→0.31, housing starts 0.18→0.36 (recall 0.75, lead 4).
+- **`episode_duration`**: `since` pointed at first non-breach obs instead of
+  the run start (`runStart` → `runStart − run`); a short re-breach run after
+  a sub-exit gap now keeps the episode alive instead of flapping to ok.
+- **Backtest look-ahead**: `monthly_mean`/`nyfed_prob` transformed obs
+  (dated month-01) were "known" raw-lag days later — mid-month leak. These
+  transforms now get effective freq `monthly` in `SeriesCache` (45d lag).
+- **`Panel.latestObsDate`** used the transformed series' last date →
+  `nyfed_recession_prob` (YYYY-MM-01) skipped re-eval all month. Now keyed
+  on raw series dates.
+
+### Fixed (medium)
+
+- `runEngine`: per-signal try/catch — one bad rule can't abort the run.
+- Composite snapshot now also written when `modelProb` drifts >0.1pp
+  (was only on score/bucket change).
+- `transitionSignalState` wrapped in a transaction (state+event atomic).
+- `recordPayment` → `INSERT OR IGNORE` + returns bool; redelivered
+  `successful_payment` no longer throws before activation.
+- `applyRefund` failure after a successful `refundStarPayment` is now
+  logged loudly instead of silently losing subscription bookkeeping.
+- `expireDueSubscriptions` resets `delivery_mode → digest` (matches the
+  refund path's downgrade behavior).
+- Scheduler crons pinned to `UTC` explicitly — `TIMEZONE` env can no longer
+  shift documented UTC times.
+- `fit-model` gained a temporal OOS split report (train ≤2017/test 2017+).
+  Result: OOS R² < 0, sign instability (unrate −0.17 full vs +1.21 train)
+  driven by the unresolved 2022–25 inversion — pooled_logit flagged
+  experimental in model.yaml; keep divergence-warnings visible.
+
+### Verified NOT bugs
+
+- `digestKey` ISO week: Thursday/Jan-4 math is exact (always whole weeks).
+- `npm run digest -- weekly`: argv[1] = "weekly" under tsx -e — works.
+- PLAN.md `critical = вес+0.5` was a doc bug (code/config use ×1.5) — doc fixed.
+
+### Known limitations (accepted, documented)
+
+- `fetchIncremental` 14d overlap won't catch deep benchmark revisions;
+  GHA writes one cache entry per run (restore-keys picks the latest);
+  `quiet_hours`/`plans.free.min_severity_floor` are configured but unused.
+
 ## 2026-10-05 (implementation pass 8: message layout v2)
 
 ### Changed

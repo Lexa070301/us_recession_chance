@@ -51,6 +51,19 @@ describe("episode_duration", () => {
     const r = evaluate(ev, getObs(rows));
     expect(r.state).toBe("ok");
   });
+
+  it("keeps episode through short gap + short re-breach", () => {
+    // 15 breach, 2 non-breach (< exit 5), then breach resumes but only 1 obs
+    const rows = obs([...Array(15).fill(-1), 1, 1, -1]);
+    const r = evaluate(ev, getObs(rows));
+    expect(r.state).toBe("critical"); // episode never died
+    expect(r.since).toBe("2024-01-01"); // original episode start, not the gap
+  });
+
+  it("episode dies when gap >= exit even with a re-breach", () => {
+    const rows = obs([...Array(15).fill(-1), 1, 1, 1, 1, 1, -1]);
+    expect(evaluate(ev, getObs(rows)).state).toBe("ok");
+  });
 });
 
 describe("levels", () => {
@@ -73,6 +86,18 @@ describe("levels", () => {
 
   it("exit_below forces ok", () => {
     expect(evaluate(ev, getObs(obs([45, 20]))).state).toBe("ok");
+  });
+
+  it("hysteresis: dead band between exit and trigger holds prev state", () => {
+    const prev = { state: "warning" as const, since: "2024-01-01" };
+    // 27 is below trigger(30) but above exit(25) — without prev it would flip to ok
+    const held = evaluate(ev, getObs(obs([45, 27])), 12, prev);
+    expect(held.state).toBe("warning");
+    expect(held.since).toBe("2024-01-01");
+    // without a stored state the same value is ok (no hysteresis)
+    expect(evaluate(ev, getObs(obs([45, 27]))).state).toBe("ok");
+    // genuinely below the exit → clears even with prev set
+    expect(evaluate(ev, getObs(obs([45, 20])), 12, prev).state).toBe("ok");
   });
 });
 
@@ -139,6 +164,14 @@ describe("yoy", () => {
     const rows = monthly([...Array(12).fill(100), 89]);
     const r = evaluate(ev, getObs(rows), 12);
     expect(r.state).toBe("critical");
+  });
+
+  it("yoy is a PERCENT change (audit fix): -9 in a 1400-base series is not critical", () => {
+    const rows = monthly([...Array(12).fill(1400), 1391]); // -0.64% — abs drop 9 < 10
+    const r = evaluate(ev, getObs(rows), 12);
+    expect(r.state).toBe("ok");
+    const rows2 = monthly([...Array(12).fill(1400), 1200]); // -14.3% — critical
+    expect(evaluate(ev, getObs(rows2), 12).state).toBe("critical");
   });
 });
 

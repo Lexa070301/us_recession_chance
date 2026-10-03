@@ -46,6 +46,12 @@ export function monthEnd(month: string): string {
 
 const refKey = (r: InputRef) => `${r.key}|${r.transform}`;
 
+/** Transforms that aggregate to a coarser (monthly) grid — the publish lag
+ * must apply to the aggregated period, not the raw series' frequency.
+ * Otherwise a monthly value dated YYYY-MM-01 would be "known" on the 2nd
+ * although it physically needs the whole month's data. */
+const AGGREGATING_TRANSFORMS = new Set(["monthly_mean", "nyfed_prob"]);
+
 /** Transformed input series, loaded once and shared across a backtest run. */
 export class SeriesCache {
   private cache = new Map<string, { obs: ObsRow[]; freq: Frequency }>();
@@ -56,9 +62,10 @@ export class SeriesCache {
     let e = this.cache.get(refKey(ref));
     if (!e) {
       const def = getSeriesDef(ref.key);
+      const rawFreq = def?.frequency ?? "monthly";
       e = {
         obs: applyTransform(getObservations(ref.key, {}, this.conn), ref.transform),
-        freq: def?.frequency ?? "monthly",
+        freq: AGGREGATING_TRANSFORMS.has(ref.transform) ? "monthly" : rawFreq,
       };
       this.cache.set(refKey(ref), e);
     }
@@ -102,13 +109,16 @@ export function replaySignal(signal: SignalDef, cache: SeriesCache): StatePoint[
   const { obs, freq } = cache.get(signal.input);
   const lag = PUBLISH_LAG_DAYS[freq];
   const out: StatePoint[] = [];
+  let prev: { state: SignalState; since: string | null } | undefined;
   for (const o of obs) {
     const evalDate = addDays(o.date, lag);
     const res = evaluate(
       signal.evaluator,
       (ref) => knownAt(cache, ref ?? signal.input, evalDate),
       YOY_PERIODS[freq],
+      prev,
     );
+    prev = { state: res.state, since: res.since };
     out.push({ date: evalDate, state: res.state });
   }
   return out;

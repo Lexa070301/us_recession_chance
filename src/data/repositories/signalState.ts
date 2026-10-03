@@ -72,36 +72,38 @@ export function transitionSignalState(
   const db = conn ?? getDb();
   const prev = getSignalState(signalKey, db);
 
-  db.prepare(
-    `INSERT INTO signal_state (signal_key, state, since, episode_start, last_value, last_obs_date, context_json, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-     ON CONFLICT (signal_key) DO UPDATE SET
-       state = excluded.state,
-       since = excluded.since,
-       episode_start = excluded.episode_start,
-       last_value = excluded.last_value,
-       last_obs_date = excluded.last_obs_date,
-       context_json = excluded.context_json,
-       updated_at = datetime('now')`,
-  ).run(
-    signalKey,
-    next.state,
-    next.since,
-    next.episodeStart,
-    next.value,
-    next.obsDate,
-    next.context ? JSON.stringify(next.context) : null,
-  );
+  return db.transaction(() => {
+    db.prepare(
+      `INSERT INTO signal_state (signal_key, state, since, episode_start, last_value, last_obs_date, context_json, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT (signal_key) DO UPDATE SET
+         state = excluded.state,
+         since = excluded.since,
+         episode_start = excluded.episode_start,
+         last_value = excluded.last_value,
+         last_obs_date = excluded.last_obs_date,
+         context_json = excluded.context_json,
+         updated_at = datetime('now')`,
+    ).run(
+      signalKey,
+      next.state,
+      next.since,
+      next.episodeStart,
+      next.value,
+      next.obsDate,
+      next.context ? JSON.stringify(next.context) : null,
+    );
 
-  if (prev.state === next.state) return null;
+    if (prev.state === next.state) return null;
 
-  const res = db
-    .prepare(
-      `INSERT INTO signal_events (signal_key, from_state, to_state, value, payload_json)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
-    .run(signalKey, prev.state, next.state, next.value, JSON.stringify(next.context ?? {}));
-  return Number(res.lastInsertRowid);
+    const res = db
+      .prepare(
+        `INSERT INTO signal_events (signal_key, from_state, to_state, value, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(signalKey, prev.state, next.state, next.value, JSON.stringify(next.context ?? {}));
+    return Number(res.lastInsertRowid);
+  })();
 }
 
 export function getEvent(eventId: number, conn?: Database.Database): SignalEventRow | undefined {

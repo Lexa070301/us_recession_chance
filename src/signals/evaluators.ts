@@ -1,7 +1,7 @@
 import type { EvaluatorDef, Op } from "../config/schema.js";
 import type { ObsRow } from "../data/repositories/observations.js";
 import { SEVERITY_ORDER, type SignalState } from "../data/repositories/signalState.js";
-import type { EvalResult, GetObs } from "./types.js";
+import type { EvalResult, GetObs, PrevEvalState } from "./types.js";
 
 const cmp = (op: Op, v: number, t: number): boolean => {
   switch (op) {
@@ -35,10 +35,12 @@ function trailingRunStart(obs: ObsRow[], pred: (v: number) => boolean): number {
 function evalLevels(
   obs: ObsRow[],
   params: { levels: { state: SignalState; op: Op; threshold: number }[]; exit_below?: number; exit_above?: number },
+  prev?: PrevEvalState,
 ): EvalResult {
   if (!obs.length) return ok;
   const last = obs[obs.length - 1].value;
 
+  // Hard exit: below exit_below / above exit_above the state clears for real.
   if (params.exit_below !== undefined && last < params.exit_below) {
     return { ...ok, value: last, context: { last } };
   }
@@ -52,6 +54,17 @@ function evalLevels(
     if (cmp(lv.op, last, lv.threshold)) {
       state = lv.state;
       break;
+    }
+  }
+
+  // Hysteresis: no level matched but the value sits in the dead band between
+  // the trigger and the exit threshold — keep the previous non-ok state.
+  if (state === "ok" && prev && prev.state !== "ok") {
+    const held =
+      (params.exit_below !== undefined && last >= params.exit_below) ||
+      (params.exit_above !== undefined && last <= params.exit_above);
+    if (held) {
+      return { state: prev.state, value: last, since: prev.since, context: { last, held: true } };
     }
   }
   if (state === "ok") return { ...ok, value: last, context: { last } };
@@ -76,46 +89,48 @@ function evalEpisodeDuration(
 
   // trailing run of condition=true
   const start = trailingRunStart(obs, cond);
-  let runLen = obs.length - start;
+  const runLen = obs.length - start;
 
-  if (runLen === 0 && params.exit_periods > 1) {
-    // gap after a breach run shorter than exit_periods keeps the episode alive
+  if (runLen >= params.warn_periods) {
+    const state =
+      params.critical_periods && runLen >= params.critical_periods ? "critical" : "warning";
+    return {
+      state,
+      value: last,
+      since: obs[start].date,
+      context: { last, run_periods: runLen },
+    };
+  }
+
+  // Cooling gap: a qualified breach run stays alive while fewer than
+  // exit_periods consecutive non-breach obs follow it — regardless of whether
+  // a new (still short) breach run has already started.
+  if (params.exit_periods > 1) {
+    let i = obs.length - 1 - runLen; // skip the trailing (short) breach run
     let gap = 0;
-    let i = obs.length - 1;
     while (i >= 0 && !cond(obs[i].value)) {
       gap++;
       i--;
     }
-    const runStart = i + 1;
+    const runStart = i + 1; // index just after the prior breach run
     let run = 0;
-    let j = i;
-    while (j >= 0 && cond(obs[j].value)) {
+    while (i >= 0 && cond(obs[i].value)) {
       run++;
-      j--;
+      i--;
     }
     if (run >= params.warn_periods && gap < params.exit_periods) {
-      runLen = run;
       const state =
         params.critical_periods && run >= params.critical_periods ? "critical" : "warning";
       return {
         state,
         value: last,
-        since: obs[runStart - run < 0 ? 0 : runStart].date,
-        context: { last, run_periods: run, cooling_gap: gap },
+        since: obs[Math.max(0, runStart - run)].date,
+        context: { last, run_periods: run + runLen, cooling_gap: gap },
       };
     }
-    return { ...ok, value: last, context: { last } };
   }
 
-  if (runLen < params.warn_periods) return { ...ok, value: last, context: { last, run_periods: runLen } };
-
-  const state = params.critical_periods && runLen >= params.critical_periods ? "critical" : "warning";
-  return {
-    state,
-    value: last,
-    since: obs[start].date,
-    context: { last, run_periods: runLen },
-  };
+  return { ...ok, value: last, context: { last, run_periods: runLen } };
 }
 
 function evalStreak(
@@ -211,11 +226,17 @@ function evalYoy(
 ): EvalResult {
   if (obs.length <= periodsBack) return ok;
   const last = obs[obs.length - 1].value;
-  // yoy series aligned to obs indices starting at periodsBack
+  // yoy series aligned to obs indices starting at periodsBack; PERCENT change
   const yoy: ObsRow[] = [];
   for (let i = periodsBack; i < obs.length; i++) {
-    yoy.push({ date: obs[i].date, value: obs[i].value - obs[i - periodsBack].value });
+    const prevVal = obs[i - periodsBack].value;
+    if (prevVal === 0) continue;
+    yoy.push({
+      date: obs[i].date,
+      value: ((obs[i].value - prevVal) / Math.abs(prevVal)) * 100,
+    });
   }
+  if (!yoy.length) return ok;
   const lastYoy = yoy[yoy.length - 1].value;
 
   const crit = params.critical;
@@ -244,10 +265,15 @@ function evalYoy(
 // Dispatcher
 // ------------------------------------------------------------------
 
-export function evaluate(ev: EvaluatorDef, getObs: GetObs, yoyPeriods = 12): EvalResult {
+export function evaluate(
+  ev: EvaluatorDef,
+  getObs: GetObs,
+  yoyPeriods = 12,
+  prev?: PrevEvalState,
+): EvalResult {
   switch (ev.type) {
     case "levels":
-      return evalLevels(getObs(ev.input), ev.params);
+      return evalLevels(getObs(ev.input), ev.params, prev);
     case "episode_duration":
       return evalEpisodeDuration(getObs(ev.input), ev.params);
     case "streak":
@@ -259,14 +285,14 @@ export function evaluate(ev: EvaluatorDef, getObs: GetObs, yoyPeriods = 12): Eva
     case "yoy":
       return evalYoy(getObs(ev.input), ev.params, yoyPeriods);
     case "any_of": {
-      const results = ev.branches.map((b) => evaluate(b, getObs, yoyPeriods));
+      const results = ev.branches.map((b) => evaluate(b, getObs, yoyPeriods, prev));
       const top = results.reduce<EvalResult>((acc, r) =>
         SEVERITY_ORDER[r.state] > SEVERITY_ORDER[acc.state] ? r : acc,
       results[0]);
       return { ...top, context: { ...top.context, branches: results.map((r) => r.state) } };
     }
     case "all_of": {
-      const results = ev.branches.map((b) => evaluate(b, getObs, yoyPeriods));
+      const results = ev.branches.map((b) => evaluate(b, getObs, yoyPeriods, prev));
       const weakest = results.reduce<SignalState>((acc, r) => minState(acc, r.state), "critical");
       const strongest = results.reduce<SignalState>((acc, r) => maxState(acc, r.state), "ok");
       const topVal = results.find((r) => r.value !== null)?.value ?? null;

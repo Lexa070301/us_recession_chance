@@ -1,8 +1,11 @@
 version: 1
 
-# Signal catalog. Evaluators are pure functions of a series' own history —
-# state is recomputed deterministically each run; the engine diffs vs the
-# stored state and emits SignalEvent only on transitions (episode dedupe).
+# Signal catalog. Evaluators recompute state deterministically from a
+# series' own history + the previously stored state (levels hysteresis via
+# exit_below/exit_above); the engine diffs vs stored state and emits
+# SignalEvent only on transitions (episode dedupe).
+#
+# yoy thresholds are PERCENT change YoY (e.g. critical: -10 = −10% YoY).
 #
 # hist = static statistics from literature/backtest (see scripts/histStats.md).
 #   precision: share of signal EPISODES followed by recession within 12m
@@ -87,7 +90,7 @@ signals:
       recessions_covered: 4
       precision: 0.4
       recall: 1.0
-      median_lead_months: 9
+      median_lead_months: 8
       note: "NY Fed track record (1960+, prob>40%): missed only Oct-1966. Our T10Y3M starts 1982; 2022–25 episode unresolved → measured precision drags. Trigger level >30% picks up brief LTCM-era dips."
 
   - key: nfci_tightening
@@ -193,7 +196,7 @@ signals:
       sample: "1990–2026, quarterly, measured 2026-10"
       recessions_covered: 4
       insufficient_history: true
-      precision: 0.4
+      precision: 0.33
       recall: 1.0
       median_lead_months: 4
       note: "Net % banks tightening C&I loans; led all covered recessions but FPs in stress episodes; only 4 recessions."
@@ -210,11 +213,12 @@ signals:
       params: { op: "<", threshold: 0, warn: 3, critical: -10 }
     hist:
       sample: "1966–2026, measured 2026-10"
+      episodes: 16
       recessions_covered: 8
-      precision: 0.11
+      precision: 0.31
       recall: 1.0
       median_lead_months: 7
-      note: "Permits YoY<0 fires in every slowdown incl. mid-cycle — high recall, low standalone precision. Weight in composite only."
+      note: "Permits YoY% <0 fires in every slowdown incl. mid-cycle; critical at −10%. Remeasured after yoy %-fix — precision 0.11→0.31."
 
   - key: housing_starts_decline
     block: housing
@@ -225,11 +229,12 @@ signals:
       params: { op: "<", threshold: -10, warn: 2 }
     hist:
       sample: "1966–2026, measured 2026-10"
+      episodes: 11
       recessions_covered: 8
-      precision: 0.18
-      recall: 1.0
-      median_lead_months: 8
-      note: "YoY<-10% also fires in housing downturns w/o recession (2018, 2023). Confirmatory."
+      precision: 0.36
+      recall: 0.75
+      median_lead_months: 4
+      note: "YoY% <−10% also fires in housing downturns w/o recession (2018, 2023). Remeasured after yoy %-fix — precision 0.18→0.36, recall 1.0→0.75."
 
   - key: durable_orders_decline
     block: housing

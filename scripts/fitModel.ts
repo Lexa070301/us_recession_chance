@@ -132,6 +132,35 @@ function main() {
     );
   }
 
+  // Temporal out-of-sample check: fit on the first 80% of months, score the
+  // rest. Not a clean validation (overlapping 12m labels + standardization
+  // on train-only moments) but catches unstable/overfit coefficients.
+  const cut = Math.floor(X.length * 0.8);
+  const fitTr = fitLogit(X.slice(0, cut), y.slice(0, cut));
+  const Xte = X.slice(cut);
+  const yTe = y.slice(cut);
+  const probsTe = Xte.map((row) => predictProb(fitTr.betaStd, fitTr.means, fitTr.stds, row));
+
+  const teLogLik = probsTe.reduce((s, p, i) => s + (yTe[i] ? Math.log(p) : Math.log(1 - p)), 0);
+  const teNull = yTe.reduce((s, v) => s + v, 0) / yTe.length;
+  const teNullLL = yTe.length * (teNull * Math.log(teNull) + (1 - teNull) * Math.log(1 - teNull));
+  console.log(`\nOOS temporal split — train ${keptMonths[0]}..${keptMonths[cut - 1]}, test ${keptMonths[cut]}..${keptMonths[keptMonths.length - 1]}`);
+  console.log(`test n=${Xte.length}, hits=${yTe.reduce((s, v) => s + v, 0)}, OOS McFadden R² ${(1 - teLogLik / teNullLL).toFixed(3)}`);
+  console.log(`${pad("predictor", 20)} ${pad("coef(std) full", 14)} coef(std) train80`);
+  FEATURES.forEach((f, j) => {
+    console.log(
+      `${pad(f.name, 20)} ${pad(fit.betaStd[j + 1].toFixed(3), 14)} ${fitTr.betaStd[j + 1].toFixed(3)}`,
+    );
+  });
+  console.log("OOS reliability:");
+  console.log(`${pad("pred", 10)} ${pad("n", 6)} ${pad("avg_pred", 9)} empirical`);
+  for (const b of reliability(probsTe, yTe)) {
+    console.log(
+      `${pad(`${b.lo.toFixed(1)}–${b.hi.toFixed(1)}`, 10)} ${pad(String(b.n), 6)} ` +
+        `${pad(b.avgPred.toFixed(3), 9)} ${b.empirical.toFixed(3)}`,
+    );
+  }
+
   console.log("\n# Paste into config/model.yaml if the fit looks sane:");
   console.log("pooled_logit:");
   console.log(`  horizon_months: ${HORIZON}`);

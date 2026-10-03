@@ -399,7 +399,7 @@ desc / hist / composite / disclaimer`.
 | sahm_nowcast           | SAHMREALTIME      | monthly   | `≥ 0.5` — **onset, не прогноз**                                      | nowcast   | —      |
 | chauvet_nowcast        | RECPROUSM156N     | monthly   | `> 20%` — вероятность «уже в рецессии»                               | nowcast   | —      |
 
-Композитный скор = Σ весов активных (watch+warning=вес, critical=вес+0.5).
+Композитный скор = Σ весов активных (watch=0.5·вес, warning=1.0·вес, critical=1.5·вес).
 Бакеты → вероятность: калибровка в Phase 5; стартовый маппинг —
 `0–4 низкий / 5–8 повышенный / 9–12 высокий / 13+ системный` (из ресёрча).
 

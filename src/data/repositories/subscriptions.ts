@@ -1,19 +1,23 @@
 import type Database from "better-sqlite3";
 import { getDb } from "../db.js";
-import { setUserPlan } from "./users.js";
+import { savePrefs, setUserPlan } from "./users.js";
 
+/** Insert a payment row; returns false if the charge_id already exists. */
 export function recordPayment(
   chargeId: string,
   userId: number,
   starsAmount: number,
   periodDays: number,
   conn?: Database.Database,
-): void {
+): boolean {
   const db = conn ?? getDb();
-  db.prepare(
-    `INSERT INTO payments (charge_id, user_id, stars_amount, period_days)
-     VALUES (?, ?, ?, ?)`,
-  ).run(chargeId, userId, starsAmount, periodDays);
+  const res = db
+    .prepare(
+      `INSERT OR IGNORE INTO payments (charge_id, user_id, stars_amount, period_days)
+       VALUES (?, ?, ?, ?)`,
+    )
+    .run(chargeId, userId, starsAmount, periodDays);
+  return res.changes > 0;
 }
 
 export function activateSubscription(
@@ -156,6 +160,7 @@ export function expireDueSubscriptions(conn?: Database.Database): number[] {
     for (const { user_id } of due) {
       db.prepare("UPDATE subscriptions SET status = 'expired' WHERE user_id = ?").run(user_id);
       setUserPlan(user_id, "free", db);
+      savePrefs(user_id, { delivery_mode: "digest" }, db);
     }
   });
   tx();

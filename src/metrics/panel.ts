@@ -36,11 +36,17 @@ export class Panel {
     return [...refs.values()];
   }
 
-  /** Latest raw (untransformed) observation date among a signal's inputs. */
+  /**
+   * Latest RAW (untransformed) observation date among a signal's inputs.
+   * Keyed on raw series — transforms can pin the transformed date
+   * (e.g. monthly_mean emits YYYY-MM-01 all month) while new raw data
+   * keeps arriving and should trigger re-evaluation.
+   */
   latestObsDate(signal: SignalDef): string | null {
     let max: string | null = null;
-    for (const ref of Panel.signalInputs(signal)) {
-      const obs = this.resolve(ref);
+    const keys = new Set(Panel.signalInputs(signal).map((r) => r.key));
+    for (const key of keys) {
+      const obs = getObservations(key, {}, this.conn);
       const d = obs.length ? obs[obs.length - 1].date : null;
       if (d && (!max || d > max)) max = d;
     }

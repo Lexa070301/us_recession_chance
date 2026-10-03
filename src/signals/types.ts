@@ -15,3 +15,9 @@ export interface EvalResult {
 }
 
 export type GetObs = (ref?: InputRef) => ObsRow[];
+
+/** Previously stored state — needed for hysteresis (exit_below/exit_above). */
+export interface PrevEvalState {
+  state: SignalState;
+  since: string | null;
+}

@@ -17,7 +17,9 @@ const wrap = (name: string, fn: () => Promise<void>) => async () => {
 };
 
 export function startScheduler(): void {
-  const tz = getConfig().env.timezone;
+  // All configured times are UTC (config keys say *_utc) — pin the timezone
+  // explicitly so TIMEZONE env can't shift the documented schedule.
+  const tz = "UTC";
   const defs = getConfig().channels.defaults;
   const digestUtc = defs.digest_time_utc; // "HH:MM"
   const [dh, dm] = digestUtc.split(":");

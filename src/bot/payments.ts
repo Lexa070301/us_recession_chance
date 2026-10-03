@@ -52,8 +52,13 @@ export async function onSuccessfulPayment(ctx: Context): Promise<void> {
   }
 
   const chargeId = payment.telegram_payment_charge_id;
-  recordPayment(chargeId, userId, tier.stars, tier.days);
-  activateSubscription(userId, tier.days, chargeId);
+  const isNew = recordPayment(chargeId, userId, tier.stars, tier.days);
+  if (isNew) {
+    activateSubscription(userId, tier.days, chargeId);
+  } else {
+    // Telegram redelivered successful_payment — already activated, stay idempotent.
+    console.warn(`duplicate successful_payment ${chargeId} for user ${userId} — skipped`);
+  }
   // upgrade UX: switch to instant delivery by default
   savePrefs(userId, { delivery_mode: "instant" });
 
@@ -108,7 +113,14 @@ export async function onRefundConfirm(ctx: Context, chargeId: string): Promise<v
     return;
   }
 
-  const res = applyRefund(chargeId);
+  // Telegram already returned the Stars — bookkeeping must not fail silently.
+  let res: ReturnType<typeof applyRefund>;
+  try {
+    res = applyRefund(chargeId);
+  } catch (err) {
+    console.error(`refund bookkeeping failed for ${chargeId} (Stars already refunded):`, err);
+    res = "unknown";
+  }
   const expiresAt = res === "already_refunded" || res === "unknown" ? null : res.expiresAt;
   if (expiresAt === null) {
     savePrefs(userId, { delivery_mode: "digest" });

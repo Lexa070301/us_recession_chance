@@ -52,6 +52,9 @@ subscription:
 # Pooled 12m-entry logit, fitted by `npm run fit-model` on 1983–2025
 # (McFadden R² ≈ 0.39, in-sample; recession & ≤12m post-recession months
 # excluded). Standardized coefficients; runtime: src/signals/pooledProb.ts.
+# CAVEAT (audit 2026-10): temporal OOS split (train ≤2017, test 2017–25) is
+# poor — coefficient signs unstable, OOS R² < 0, driven by the unresolved
+# 2022–25 inversion episode. Treat the estimate as experimental context.
 pooled_logit:
   horizon_months: 12
   sample: "1983-12..2025-09"

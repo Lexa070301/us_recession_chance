@@ -70,38 +70,53 @@ export function runEngine(conn?: Database.Database): EngineRun {
       continue;
     }
 
-    const inputFreq = getSeriesDef(signal.input.key)?.frequency ?? "monthly";
-    const result = evaluate(
-      signal.evaluator,
-      (ref) => panel.resolve(ref ?? signal.input),
-      YOY_PERIODS[inputFreq],
-    );
+    try {
+      const inputFreq = getSeriesDef(signal.input.key)?.frequency ?? "monthly";
+      const result = evaluate(
+        signal.evaluator,
+        (ref) => panel.resolve(ref ?? signal.input),
+        YOY_PERIODS[inputFreq],
+        { state: stored.state, since: stored.episode_start ?? stored.since },
+      );
 
-    const eventId = transitionSignalState(
-      signal.key,
-      {
-        state: result.state,
-        since: result.since,
-        episodeStart: result.state === "ok" ? null : result.since,
-        value: result.value,
-        obsDate: latestObsDate,
-        context: { ...result.context, since: result.since, _rule_hash: ruleHash },
-      },
-      db,
-    );
-    evaluated++;
-    if (eventId !== null) {
-      const ev = getEvent(eventId, db);
-      if (ev) events.push(ev);
+      const eventId = transitionSignalState(
+        signal.key,
+        {
+          state: result.state,
+          since: result.since,
+          episodeStart: result.state === "ok" ? null : result.since,
+          value: result.value,
+          obsDate: latestObsDate,
+          context: { ...result.context, since: result.since, _rule_hash: ruleHash },
+        },
+        db,
+      );
+      evaluated++;
+      if (eventId !== null) {
+        const ev = getEvent(eventId, db);
+        if (ev) events.push(ev);
+      }
+    } catch (err) {
+      // Isolate per-signal failures: one bad rule must not kill the run.
+      console.error(`[engine] ${signal.key} evaluation failed:`, err);
+      skipped++;
     }
   }
 
-  // Composite snapshot: on any transition, or when score moved.
+  // Composite snapshot: on any transition, when score/bucket moved,
+  // or when the model estimate drifted (kept in detail._model_prob).
   const states = new Map(getAllSignalStates(db).map((s) => [s.signal_key, s]));
   const composite = computeComposite(states, cfg.signals);
   composite.modelProb = computePooledProb(db);
   const prev = getLatestComposite(db);
-  if (events.length > 0 || !prev || prev.score !== composite.score || prev.bucket !== composite.bucket) {
+  const prevModel = prev?.detail_json
+    ? ((JSON.parse(prev.detail_json) as Record<string, unknown>)._model_prob as number | null)
+    : null;
+  const modelMoved =
+    (composite.modelProb ?? null) !== null &&
+    (prevModel === null ||
+      Math.abs((composite.modelProb ?? 0) - (prevModel ?? 0)) > 0.001);
+  if (events.length > 0 || !prev || prev.score !== composite.score || prev.bucket !== composite.bucket || modelMoved) {
     insertCompositeSnapshot(
       composite.score,
       composite.bucket,
