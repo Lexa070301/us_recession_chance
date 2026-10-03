@@ -81,6 +81,7 @@ export type TransformFn = (obs: ObsRow[]) => ObsRow[];
 
 const REGISTRY: Record<string, TransformFn> = {
   value: (o) => o,
+  ma3: (o) => movingAverage(o, 3),
   ma4: (o) => movingAverage(o, 4),
   ma13: (o) => movingAverage(o, 13),
   ma6: (o) => movingAverage(o, 6),

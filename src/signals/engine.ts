@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type Database from "better-sqlite3";
 import { getConfig, getSeriesDef } from "../config/load.js";
 import type { Frequency } from "../config/schema.js";
@@ -14,6 +15,7 @@ import {
 import { Panel } from "../metrics/panel.js";
 import { evaluate } from "./evaluators.js";
 import { computeComposite, type CompositeResult } from "./score.js";
+import { computePooledProb } from "./pooledProb.js";
 
 export const YOY_PERIODS: Record<Frequency, number> = {
   daily: 252,
@@ -47,11 +49,21 @@ export function runEngine(conn?: Database.Database): EngineRun {
     const latestObsDate = panel.latestObsDate(signal);
     const stored = getSignalState(signal.key, db);
 
+    // Re-evaluate only on new data OR when the rule itself changed
+    // (config edits must not leave stale states behind).
+    const ruleHash = createHash("sha1")
+      .update(JSON.stringify(signal.evaluator))
+      .digest("hex")
+      .slice(0, 12);
+    const storedHash = stored.context_json
+      ? (JSON.parse(stored.context_json) as Record<string, unknown>)._rule_hash
+      : undefined;
+
     if (!latestObsDate) {
       skipped++;
       continue;
     }
-    if (stored.last_obs_date === latestObsDate && stored.last_obs_date !== null) {
+    if (stored.last_obs_date === latestObsDate && storedHash === ruleHash) {
       skipped++;
       continue;
     }
@@ -71,7 +83,7 @@ export function runEngine(conn?: Database.Database): EngineRun {
         episodeStart: result.state === "ok" ? null : result.since,
         value: result.value,
         obsDate: latestObsDate,
-        context: { ...result.context, since: result.since },
+        context: { ...result.context, since: result.since, _rule_hash: ruleHash },
       },
       db,
     );
@@ -85,9 +97,16 @@ export function runEngine(conn?: Database.Database): EngineRun {
   // Composite snapshot: on any transition, or when score moved.
   const states = new Map(getAllSignalStates(db).map((s) => [s.signal_key, s]));
   const composite = computeComposite(states, cfg.signals);
+  composite.modelProb = computePooledProb(db);
   const prev = getLatestComposite(db);
   if (events.length > 0 || !prev || prev.score !== composite.score || prev.bucket !== composite.bucket) {
-    insertCompositeSnapshot(composite.score, composite.bucket, composite.probLabel, composite.detail, db);
+    insertCompositeSnapshot(
+      composite.score,
+      composite.bucket,
+      composite.probLabel,
+      { ...composite.detail, _model_prob: composite.modelProb ?? null },
+      db,
+    );
   }
 
   return { events, composite, evaluated, skipped };

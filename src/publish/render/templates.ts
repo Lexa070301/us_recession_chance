@@ -6,6 +6,7 @@ import type {
   SignalStateRow,
 } from "../../data/repositories/signalState.js";
 import type { CompositeResult } from "../../signals/score.js";
+import { probBucketLabel } from "../../signals/pooledProb.js";
 import { t } from "./i18n.js";
 
 const STATE_ICON: Record<SignalState, string> = {
@@ -52,11 +53,15 @@ function histLine(signal: SignalDef, locale: string): string | null {
 }
 
 export function compositeLine(composite: CompositeResult, locale: string): string {
-  return t(locale, "composite.line", {
+  const base = t(locale, "composite.line", {
     score: composite.score.toFixed(1),
     bucket: t(locale, `bucket.${composite.bucket}`),
     prob: composite.probLabel,
   });
+  if (composite.modelProb !== null && composite.modelProb !== undefined) {
+    return `${base}\n${t(locale, "composite.model_prob", { prob: probBucketLabel(composite.modelProb) })}`;
+  }
+  return base;
 }
 
 export function renderSignalEvent(

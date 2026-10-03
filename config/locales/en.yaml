@@ -28,6 +28,7 @@ event:
 composite:
   title: "📊 Composite 12-month recession risk"
   line: "Score {{score}} → {{bucket}} ({{prob}})"
+  model_prob: "Model estimate (12m): {{prob}} — pooled logit, fitted on 1983–2025"
   base: "Unconditional base rate: {{base}}"
   nowcast_title: "⏱ Nowcast (already in recession?)"
   footer: "Informational data only — not investment advice."
@@ -123,9 +124,9 @@ signal:
   jolts_flows:
     name: "JOLTS labor flows"
     desc: "Openings and quits both declining — labor demand cooling."
-  lei_oecd_decline:
-    name: "Leading index (OECD CLI)"
-    desc: "Composite leading index declining for consecutive months."
+  cfnaid_weak:
+    name: "CFNAI activity index"
+    desc: "Chicago Fed National Activity Index, 3m MA below -0.7 — broad activity weakening."
   indpro_decline:
     name: "Industrial production"
     desc: "Industrial production falling YoY — near-coincident."

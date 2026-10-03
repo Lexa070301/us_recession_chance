@@ -34,12 +34,15 @@ function trailingRunStart(obs: ObsRow[], pred: (v: number) => boolean): number {
 
 function evalLevels(
   obs: ObsRow[],
-  params: { levels: { state: SignalState; op: Op; threshold: number }[]; exit_below?: number },
+  params: { levels: { state: SignalState; op: Op; threshold: number }[]; exit_below?: number; exit_above?: number },
 ): EvalResult {
   if (!obs.length) return ok;
   const last = obs[obs.length - 1].value;
 
   if (params.exit_below !== undefined && last < params.exit_below) {
+    return { ...ok, value: last, context: { last } };
+  }
+  if (params.exit_above !== undefined && last > params.exit_above) {
     return { ...ok, value: last, context: { last } };
   }
 
@@ -175,12 +178,18 @@ function evalRiseFromTrough(
 
 function evalChangeOverPeriod(
   obs: ObsRow[],
-  params: { periods: number; op: Op; warn: number; critical?: number },
+  params: { periods: number; op: Op; warn: number; critical?: number; ref_below?: number },
 ): EvalResult {
   if (obs.length <= params.periods) return ok;
   const last = obs[obs.length - 1].value;
   const ref = obs[obs.length - 1 - params.periods];
   const delta = last - ref.value;
+
+  // optional gate: only count changes that START below a level
+  // (e.g. ref_below: 0 = steepening out of inversion, not from flat)
+  if (params.ref_below !== undefined && ref.value >= params.ref_below) {
+    return { ...ok, value: last, context: { last, delta, periods: params.periods } };
+  }
 
   let state: SignalState = "ok";
   if (params.critical !== undefined && cmp(params.op, delta, params.critical)) state = "critical";

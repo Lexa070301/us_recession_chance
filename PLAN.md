@@ -297,13 +297,17 @@ desc / hist / composite / disclaimer`.
 - [x] `scripts/backtest.ts` + `src/backtest/`: replay сигналов с учётом
       лагов публикаций (PUBLISH_LAG_DAYS per freq), эпизоды (слияние <6м),
       precision/recall/median lead vs NBER-старты, калибровка score→prob
-      по бакетам. ⚠ пока на latest-vintage данных (ревизии дают лёгкий
+      по бакетам; nowcast-сигналы меряются в окне [-3м,+6м]; месяцы
+      ≤12м после конца рецессии исключены (post-rec shadow).
+      ✅ Прогнан на реальных данных; hist:-статистики обновлены по
+      измеренному. ⚠ latest-vintage данные (ревизии дают лёгкий
       look-ahead); полноценный ALFRED-vintage режим — следующий шаг.
 - [x] `scripts/fitModel.ts` + `src/backtest/logit.ts`: pooled logit (IRLS,
       без зависимостей) на 6 предикторах по одному из блока; предсказывает
-      P(вход в рецессию | сейчас не в рецессии), recession-месяцы исключены;
-      выводит коэффициенты + reliability-таблицу + YAML-блок для model.yaml
-      (схема `pooled_logit` добавлена, в рантайм пока не подключено).
+      P(вход в рецессию | сейчас не в рецессии), recession + post-rec-shadow
+      месяцы исключены; McFadden R² 0.385. ✅ Подключено к рантайму:
+      `pooled_logit` в model.yaml + `signals/pooledProb.ts` →
+      composite.modelProb → строка "Model estimate" в рендере.
 - [x] Отображение: бакеты (`<15%` / `15–35%` / `35–60%` / `>60%`) — без
       псевдоточных процентов (model.yaml).
 - [x] Nowcast-блок отдельно: `sahm_rule`, `chauvet_piger` — weight=0,
@@ -365,28 +369,28 @@ desc / hist / composite / disclaimer`.
 
 ## 7. Каталог сигналов v1
 
-| key                    | series (FRED)     | freq      | evaluator / правило                                     | block     | weight |
-| ---------------------- | ----------------- | --------- | ------------------------------------------------------- | --------- | ------ |
-| yield_curve_inversion  | T10Y3M            | daily     | `< 0`, эпизод ≥10 торг.дней                             | financial | 2      |
-| yield_curve_steepening | T10Y3M            | daily     | выход из инверсии рывком после глубокой (`min < -50bp`) | financial | 1      |
-| curve_10y2y            | T10Y2Y            | daily     | `< 0`, эпизод                                           | financial | 1      |
-| nyfed_prob             | T10Y3M (мес. avg) | monthly   | probit NY Fed (статич. коэф.) > 30% / 40%               | composite | 2      |
-| hy_spread              | BAMLH0A0HYM2      | daily     | `> 5%` или `Δ3m > +1п.п.`                               | credit    | 2      |
-| ig_bbb_spread          | BAMLC0A4CBBB      | daily     | `> p75 исторического` или `Δ3m`                         | credit    | 1      |
-| nfci                   | NFCI              | weekly    | `> 0` watch / `> 0.5` warn                              | financial | 2      |
-| stlfsi                 | STLFSI4           | weekly    | `> 0.5` / `> 1.0`                                       | financial | 1      |
-| lei_oecd               | USSLIND           | monthly   | `Δ6m < 0` и 6+ мес снижения                             | composite | 2      |
-| permits                | PERMIT            | monthly   | `YoY < 0` устойчиво (3м подряд)                         | housing   | 1      |
-| housing_starts         | HOUST             | monthly   | `YoY < -10%`                                            | housing   | 1      |
-| new_orders_dg          | DGORDER           | monthly   | `YoY < 0` 3м подряд (прокси ISM)                        | housing   | 1      |
-| claims_trend           | ICSA              | weekly    | `MA4 ↑ 8+ недель` или `+15% от min 12м`                 | labor     | 1      |
-| continued_claims       | CCSA              | weekly    | `+10% от min 12м`                                       | labor     | 1      |
-| temp_help              | TEMPHELPS         | monthly   | `YoY < 0` 3м подряд                                     | labor     | 1      |
-| jolts_flows            | JTSJOL, JTSQUR    | monthly   | вакансии ↓3м и quits ↓ (⚠ n=2 рецессии)                 | labor     | 1      |
-| sloos_tightening       | DRTSCILM          | quarterly | `> 20%` банков ужесточают                               | credit    | 2      |
-| indpro                 | INDPRO            | monthly   | `YoY < 0`                                               | composite | 1      |
-| sahm_nowcast           | SAHMREALTIME      | monthly   | `≥ 0.5` — **onset, не прогноз**                         | nowcast   | —      |
-| chauvet_nowcast        | RECPROUSM156N     | monthly   | `> 20%` — вероятность «уже в рецессии»                  | nowcast   | —      |
+| key                    | series (FRED)     | freq      | evaluator / правило                                                  | block     | weight |
+| ---------------------- | ----------------- | --------- | -------------------------------------------------------------------- | --------- | ------ |
+| yield_curve_inversion  | T10Y3M            | daily     | `< 0`, эпизод ≥10 торг.дней                                          | financial | 2      |
+| yield_curve_steepening | T10Y3M            | daily     | выход из инверсии рывком после глубокой (`min < -50bp`)              | financial | 1      |
+| curve_10y2y            | T10Y2Y            | daily     | `< 0`, эпизод                                                        | financial | 1      |
+| nyfed_prob             | T10Y3M (мес. avg) | monthly   | probit NY Fed (статич. коэф.) > 30% / 40%                            | composite | 2      |
+| hy_spread              | BAMLH0A0HYM2      | daily     | `> 5%` или `Δ3m > +1п.п.`                                            | credit    | 2      |
+| ig_bbb_spread          | BAMLC0A4CBBB      | daily     | `> p75 исторического` или `Δ3m`                                      | credit    | 1      |
+| nfci                   | NFCI              | weekly    | `> 0` watch / `> 0.5` warn                                           | financial | 2      |
+| stlfsi                 | STLFSI4           | weekly    | `> 0.5` / `> 1.0`                                                    | financial | 1      |
+| cfnaid_weak            | CFNAI             | monthly   | MA3 `< -0.7` warning (USSLIND/OECD CLI discontinued на FRED 2020-02) | composite | 2      |
+| permits                | PERMIT            | monthly   | `YoY < 0` устойчиво (3м подряд)                                      | housing   | 1      |
+| housing_starts         | HOUST             | monthly   | `YoY < -10%`                                                         | housing   | 1      |
+| new_orders_dg          | DGORDER           | monthly   | `YoY < 0` 3м подряд (прокси ISM)                                     | housing   | 1      |
+| claims_trend           | ICSA              | weekly    | `MA4 ↑ 8+ недель` или `+15% от min 12м`                              | labor     | 1      |
+| continued_claims       | CCSA              | weekly    | `+10% от min 12м`                                                    | labor     | 1      |
+| temp_help              | TEMPHELPS         | monthly   | `YoY < 0` 3м подряд                                                  | labor     | 1      |
+| jolts_flows            | JTSJOL, JTSQUR    | monthly   | вакансии ↓3м и quits ↓ (⚠ n=2 рецессии)                              | labor     | 1      |
+| sloos_tightening       | DRTSCILM          | quarterly | `> 20%` банков ужесточают                                            | credit    | 2      |
+| indpro                 | INDPRO            | monthly   | `YoY < 0`                                                            | composite | 1      |
+| sahm_nowcast           | SAHMREALTIME      | monthly   | `≥ 0.5` — **onset, не прогноз**                                      | nowcast   | —      |
+| chauvet_nowcast        | RECPROUSM156N     | monthly   | `> 20%` — вероятность «уже в рецессии»                               | nowcast   | —      |
 
 Композитный скор = Σ весов активных (watch+warning=вес, critical=вес+0.5).
 Бакеты → вероятность: калибровка в Phase 5; стартовый маппинг —

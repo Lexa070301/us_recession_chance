@@ -56,6 +56,7 @@ export const evaluatorSchema: z.ZodType<EvaluatorDef> = z.lazy(() =>
       params: z.object({
         levels: z.array(levelSchema).min(1),
         exit_below: z.number().optional(),
+        exit_above: z.number().optional(),
       }),
     }),
     z.object({
@@ -97,6 +98,8 @@ export const evaluatorSchema: z.ZodType<EvaluatorDef> = z.lazy(() =>
         op: opSchema,
         warn: z.number(),
         critical: z.number().optional(),
+        /** Only fire when the reference obs was below this (e.g. ref_below: 0 = rising out of negative territory). */
+        ref_below: z.number().optional(),
       }),
     }),
     z.object({
@@ -121,11 +124,11 @@ export const evaluatorSchema: z.ZodType<EvaluatorDef> = z.lazy(() =>
 );
 
 export type EvaluatorDef =
-  | { type: "levels"; input?: InputRef; params: { levels: { state: "watch" | "warning" | "critical"; op: Op; threshold: number }[]; exit_below?: number } }
+  | { type: "levels"; input?: InputRef; params: { levels: { state: "watch" | "warning" | "critical"; op: Op; threshold: number }[]; exit_below?: number; exit_above?: number } }
   | { type: "episode_duration"; input?: InputRef; params: { op: Op; threshold: number; warn_periods: number; critical_periods?: number; exit_periods: number } }
   | { type: "streak"; input?: InputRef; params: { direction: "up" | "down"; warn_count: number; critical_count?: number } }
   | { type: "rise_from_trough"; input?: InputRef; params: { window: number; rise_pct?: number; rise_abs?: number; critical_pct?: number; critical_abs?: number } }
-  | { type: "change_over_period"; input?: InputRef; params: { periods: number; op: Op; warn: number; critical?: number } }
+  | { type: "change_over_period"; input?: InputRef; params: { periods: number; op: Op; warn: number; critical?: number; ref_below?: number } }
   | { type: "yoy"; input?: InputRef; params: { op: Op; threshold: number; warn: number; critical?: number } }
   | { type: "any_of"; branches: EvaluatorDef[] }
   | { type: "all_of"; branches: EvaluatorDef[] };
@@ -216,7 +219,20 @@ export const modelConfigSchema = z.object({
       horizon_months: z.number().int(),
       sample: z.string(),
       predictors: z.array(
-        z.object({ name: z.string(), mean: z.number(), std: z.number(), coef: z.number() }),
+        z.object({
+          name: z.string(),
+          /** Series + transform pipeline used to compute the predictor. */
+          key: z.string(),
+          ops: z.array(
+            z.object({
+              t: z.enum(["monthly_mean", "ma", "diff", "pct_change"]),
+              n: z.number().int().optional(),
+            }),
+          ),
+          mean: z.number(),
+          std: z.number(),
+          coef: z.number(),
+        }),
       ),
       intercept: z.number(),
     })

@@ -174,12 +174,20 @@ series:
     hist_start: "1990-04"
 
   # --- composite / nowcast ---
+  # USSLIND (OECD CLI) was discontinued on FRED ~2020-02 — kept for history,
+  # but the live leading-composite signal uses CFNAI instead.
   - key: lei_oecd
     source: fred
     series_id: USSLIND
     frequency: monthly
     unit: index
     hist_start: "1955-01"
+  - key: cfnaid
+    source: fred
+    series_id: CFNAI
+    frequency: monthly
+    unit: index
+    hist_start: "1967-03"
   - key: sahm
     source: fred
     series_id: SAHMREALTIME

@@ -15,6 +15,8 @@ import {
 export const HORIZON_MONTHS = 12;
 /** A recession counts as "preceded" if an episode interval reaches this far before its start. */
 export const RECALL_LOOKBACK_MONTHS = 24;
+/** Months after a recession END excluded from outcome evaluation (signals unwind slowly). */
+export const POST_REC_SHADOW_MONTHS = 12;
 
 export interface SignalBacktest {
   signalKey: string;
@@ -67,6 +69,7 @@ export function signalBacktest(
   let censored = 0;
   let evaluable = 0;
   const leads: number[] = [];
+  const isNowcast = signal.block === "nowcast";
 
   for (const ep of episodes) {
     const onset = monthIndex(ep.start);
@@ -75,6 +78,19 @@ export function signalBacktest(
       continue;
     }
     evaluable++;
+    if (isNowcast) {
+      // nowcast signals confirm onset: hit = episode onset within
+      // [start-3m, start+6m]; "lead" is negative (fires after start)
+      const lag = starts
+        .map((s) => onset - monthIndex(s))
+        .filter((d) => d >= -3 && d <= 6)
+        .sort((a, b) => a - b)[0];
+      if (lag !== undefined) {
+        hits++;
+        leads.push(-lag);
+      }
+      continue;
+    }
     const lead = starts
       .map((s) => monthIndex(s) - onset)
       .filter((d) => d > 0 && d <= HORIZON_MONTHS)
@@ -88,8 +104,8 @@ export function signalBacktest(
   const recsInSample = starts.filter((s) => monthIndex(s) >= monthIndex(sampleStart));
   const caught = recsInSample.filter((rs) =>
     episodes.some((ep) => {
-      const lo = monthIndex(rs) - RECALL_LOOKBACK_MONTHS;
-      const hi = monthIndex(rs);
+      const lo = monthIndex(rs) - (isNowcast ? 3 : RECALL_LOOKBACK_MONTHS);
+      const hi = monthIndex(rs) + (isNowcast ? 6 : 0);
       return monthIndex(ep.start) <= hi && monthIndex(ep.end ?? ep.start) >= lo;
     }),
   ).length;
@@ -144,8 +160,12 @@ export function compositeScoreGrid(
 
   const startSet = new Set(recessions.map((r) => r.start));
   const inRec = new Set<string>();
+  const postRecShadow = new Set<string>();
   for (const r of recessions) {
     for (let m = r.start; m <= r.end; m = monthAdd(m, 1)) inRec.add(m);
+    // Signals stay hot for months after a recession ends; re-entry within
+    // 12m is rare, so those months would read as false positives.
+    for (let h = 1; h <= POST_REC_SHADOW_MONTHS; h++) postRecShadow.add(monthAdd(r.end, h));
   }
   const lastKnown = Math.min(monthIndex(last), monthIndex(usrecLastMonth)) - HORIZON_MONTHS;
 
@@ -156,7 +176,7 @@ export function compositeScoreGrid(
     for (const sig of weighted) score += sig.weight * mult(stateAt(sig, cache, evalDate));
 
     let outcome: number | null = null;
-    if (!inRec.has(m) && monthIndex(m) <= lastKnown) {
+    if (!inRec.has(m) && !postRecShadow.has(m) && monthIndex(m) <= lastKnown) {
       outcome = 0;
       for (let h = 1; h <= HORIZON_MONTHS; h++) {
         if (startSet.has(monthAdd(m, h))) {

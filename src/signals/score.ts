@@ -7,6 +7,8 @@ export interface CompositeResult {
   bucket: string;
   probLabel: string;
   detail: Record<string, { state: string; weight: number; contribution: number }>;
+  /** Pooled-logit model estimate (0–1) when model.pooled_logit is configured. */
+  modelProb?: number | null;
 }
 
 export function computeComposite(

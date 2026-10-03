@@ -2,6 +2,58 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-03 (implementation pass 3: real-data E2E + calibration)
+
+### Real-data run + fixes found by backtest
+
+Backfilled 60y (95,669 obs / 29 series) and ran `npm run backtest` — it
+immediately found real problems:
+
+- **`lei_oecd` (USSLIND) discontinued on FRED in 2020-02** → leading-composite
+  signal switched to **CFNAI** (`cfnaid_weak`, MA3 < −0.7 warn / −1.0 crit;
+  1967+, 8 recessions).
+- **`hy_oas`/`bbb_oas` (ICE BofA)**: FRED API serves only ~3y of history —
+  licensing; documented in hist notes.
+- **`yield_curve_resteepening`**: plain `Δ63d > 1.0` had precision 0.15
+  (fires on any steepening) → added `ref_below` gate to `change_over_period`
+  (must rise _out of negative_ territory) → precision 0.40, lead 4m.
+- **`jolts_flows`**: `all_of` streak-3 never fired → loosened to streak-2;
+  episodes still start _inside_ recessions (2009-01, 2020-05) — JOLTS is
+  coincident, not leading. Honest note in hist.
+- **Nowcast signals** (Sahm, Chauvet–Piger): precision@12m is the wrong
+  metric — `signalBacktest` now uses an onset window `[-3m, +6m]` for
+  `block: nowcast` → Sahm 0.80, Chauvet 0.89, negative median lead as
+  expected.
+- **Composite calibration**: `severe` (≥13) band measured 14% — almost all
+  severe months are either inside recessions or the unresolved 2023–24
+  episode (the same period LEI failed for the first time in 63y). Added
+  `POST_REC_SHADOW_MONTHS=12` exclusion; band labels updated to honest wide
+  ranges; `severe` marked "uncertain — hist. rare".
+- **`hist:` stats updated** to measured values (sample ranges + "measured"
+  notes) where they materially differed from literature guesses.
+
+### Pooled logit wired end-to-end
+
+- `fit-model` on real data: McFadden R² 0.385, all signs sensible
+  (spread −, nfci +, cfnaid −, claims +, permits −, unrate −).
+- `pooled_logit` pasted into `model.yaml`; `src/signals/pooledProb.ts`
+  replays `key`+`ops` per predictor at runtime → `composite.modelProb`
+  → rendered as bucketed "Model estimate (12m)" line (en/ru).
+
+### Ops/robustness
+
+- `signal_state` now stores `_rule_hash` (sha1 of evaluator config) —
+  editing signal rules in YAML triggers re-evaluation even without new data.
+- Digest dedup verified live (2nd run → 0 enqueued); i18next support notice
+  silenced.
+- **Telegram E2E verified**: test message + full digest delivered to both
+  EN and RU channels.
+
+### Remaining
+
+- ALFRED vintage mode; Stars e2e; release-aware refetch; X adapter;
+  GitHub Actions channel-only mode.
+
 ## 2026-10-03 (implementation pass 2: Phase 5 + ops)
 
 ### Implemented

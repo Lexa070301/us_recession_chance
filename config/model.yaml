@@ -14,18 +14,27 @@ composite:
     watch: 0.5
     warning: 1.0
     critical: 1.5
+  # Empirical calibration from `npm run backtest` (1967–2026, latest-vintage,
+  # approx publish lags; months in-recession and ≤12m post-recession excluded).
+  # Measured: low 7% | elevated 70% | high 62% | severe 14% — severe is
+  # dominated by the unresolved 2023–24 episode (labels deliberately wide).
   bands:
-    - { min: 0, max: 4.99, bucket: low,      prob_label: "<15%" }
-    - { min: 5, max: 8.99, bucket: elevated, prob_label: "15–35%" }
-    - { min: 9, max: 12.99, bucket: high,    prob_label: "35–60%" }
-    - { min: 13, max: 999, bucket: severe,   prob_label: ">60%" }
+    - { min: 0, max: 4.99, bucket: low, prob_label: "<15%" }
+    - { min: 5, max: 8.99, bucket: elevated, prob_label: "≈35–60%" }
+    - { min: 9, max: 12.99, bucket: high, prob_label: "≈40–65%" }
+    - {
+        min: 13,
+        max: 999,
+        bucket: severe,
+        prob_label: "uncertain — hist. rare",
+      }
   # unconditional base rate for context: P(recession within next 12m)
   base_rate_label: "~16%"
 
 # User-facing plan gating
 plans:
   free:
-    delivery_mode: digest   # instant events are batched into daily digest
+    delivery_mode: digest # instant events are batched into daily digest
     custom_signals: false
     min_severity_floor: warning # free users can't subscribe below 'warning'
   plus:
@@ -34,5 +43,62 @@ plans:
     min_severity_floor: watch
 
 subscription:
-  stars_per_30d: 150        # price in Telegram Stars (XTR)
+  stars_per_30d: 150 # price in Telegram Stars (XTR)
   period_days: 30
+
+# Pooled 12m-entry logit, fitted by `npm run fit-model` on 1983–2025
+# (McFadden R² ≈ 0.39, in-sample; recession & ≤12m post-recession months
+# excluded). Standardized coefficients; runtime: src/signals/pooledProb.ts.
+pooled_logit:
+  horizon_months: 12
+  sample: "1983-12..2025-09"
+  predictors:
+    - {
+        name: spread_10y3m_m,
+        key: yield_10y3m,
+        ops: [{ t: monthly_mean }],
+        mean: 1.383598,
+        std: 1.250916,
+        coef: -0.626095,
+      }
+    - {
+        name: nfci_m,
+        key: nfci,
+        ops: [{ t: monthly_mean }],
+        mean: -0.410936,
+        std: 0.364622,
+        coef: 0.402219,
+      }
+    - {
+        name: cfnaid_ma3,
+        key: cfnaid,
+        ops: [{ t: ma, n: 3 }],
+        mean: 0.071276,
+        std: 0.250246,
+        coef: -0.661802,
+      }
+    - {
+        name: claims_yoy_pct,
+        key: icsa,
+        ops: [{ t: monthly_mean }, { t: pct_change, n: 12 }],
+        mean: -6.600297,
+        std: 14.939353,
+        coef: 1.471095,
+      }
+    - {
+        name: permit_yoy,
+        key: permits,
+        ops: [{ t: pct_change, n: 12 }],
+        mean: 2.946926,
+        std: 12.972377,
+        coef: -0.467715,
+      }
+    - {
+        name: unrate_chg3m,
+        key: unrate,
+        ops: [{ t: diff, n: 3 }],
+        mean: -0.110766,
+        std: 0.222758,
+        coef: -0.165159,
+      }
+  intercept: -3.443138

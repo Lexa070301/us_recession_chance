@@ -19,15 +19,22 @@ signals:
     input: { key: yield_10y3m, transform: value }
     evaluator:
       type: episode_duration
-      params: { op: "<", threshold: 0, warn_periods: 10, critical_periods: 60, exit_periods: 5 }
+      params:
+        {
+          op: "<",
+          threshold: 0,
+          warn_periods: 10,
+          critical_periods: 60,
+          exit_periods: 5,
+        }
     hist:
-      sample: "1962–2024 (reconstructed 10y–3m)"
-      episodes: 9
-      recessions_covered: 8
-      precision: 0.78
-      recall: 0.95
-      median_lead_months: 12
-      note: "Only clear false positive since 1960s: 1966–67. Hit ~92% / FA ~25% (ROC study)."
+      sample: "1982–2026 (T10Y3M series; measured 2026-10)"
+      episodes: 5
+      recessions_covered: 4
+      precision: 0.40
+      recall: 1.0
+      median_lead_months: 9
+      note: "Literature (reconstructed 1962+) is stronger: ~0.78 precision incl. 1966 FP only. Our rule needs ≥10 obs below 0 — misses brief dips; 2022–25 inversion still unresolved (no recession through 2026-09 — possible 2nd-ever FP)."
 
   - key: curve_10y2y_inversion
     block: financial
@@ -35,15 +42,21 @@ signals:
     input: { key: yield_10y2y, transform: value }
     evaluator:
       type: episode_duration
-      params: { op: "<", threshold: 0, warn_periods: 10, critical_periods: 60, exit_periods: 5 }
+      params:
+        {
+          op: "<",
+          threshold: 0,
+          warn_periods: 10,
+          critical_periods: 60,
+          exit_periods: 5,
+        }
     hist:
-      sample: "1976–2024"
-      episodes: 8
+      sample: "1976–2026 (measured 2026-10)"
+      episodes: 6
       recessions_covered: 6
-      precision: 0.75
-      recall: 0.9
-      median_lead_months: 15
-      note: "Weaker than 10y–3m for 12m horizon; kept as corroborating."
+      precision: 0.0
+      recall: 0.83
+      note: "Precision@12m = 0 because 10y–2y inverts >12m before recession starts (median lead ~15m). Recall is real but horizon is longer — corroborating signal only."
 
   - key: yield_curve_resteepening
     block: financial
@@ -51,11 +64,11 @@ signals:
     input: { key: yield_10y3m, transform: value }
     evaluator:
       type: change_over_period
-      params: { periods: 63, op: ">", warn: 1.0 }
+      params: { periods: 63, op: ">", warn: 1.0, ref_below: 0 }
     hist:
-      sample: "1982–2024"
+      sample: "1982–2026"
       insufficient_history: true
-      note: "Rapid bear steepening after deep inversion historically clusters near recession onset; limited formal studies — treat as confirmatory."
+      note: "Bear steepening OUT OF INVERSION (ref < 0) historically clusters near recession onset; steepening from flat doesn't count — fixed after v1 backtest showed 0.15 precision on plain Δ>1.0."
 
   - key: nyfed_recession_prob
     block: composite
@@ -69,13 +82,13 @@ signals:
           - { state: warning, op: ">", threshold: 30 }
         exit_below: 25
     hist:
-      sample: "1960–2024 (NY Fed model)"
-      episodes: 8
-      recessions_covered: 8
-      precision: 0.875
-      recall: 0.9
-      median_lead_months: 10
-      note: "Prob>40% missed only once (Oct-1966, 41.1%)."
+      sample: "1982–2026 (measured 2026-10)"
+      episodes: 5
+      recessions_covered: 4
+      precision: 0.4
+      recall: 1.0
+      median_lead_months: 9
+      note: "NY Fed track record (1960+, prob>40%): missed only Oct-1966. Our T10Y3M starts 1982; 2022–25 episode unresolved → measured precision drags. Trigger level >30% picks up brief LTCM-era dips."
 
   - key: nfci_tightening
     block: financial
@@ -90,11 +103,12 @@ signals:
           - { state: watch, op: ">", threshold: 0.0 }
         exit_below: -0.1
     hist:
-      sample: "1971–2024"
-      recessions_covered: 8
-      precision: 0.5
-      recall: 0.85
-      note: "NFCI>0.5 historically overlaps recession/stress episodes; >0 is common — watch only."
+      sample: "1971–2026 (measured 2026-10)"
+      recessions_covered: 7
+      precision: 0.25
+      recall: 1.0
+      median_lead_months: 8
+      note: "NFCI>0 historically overlaps recessions but fires in stress episodes too (precision ~0.25 at our thresholds) — confirmatory, not standalone."
 
   - key: stlfsi_stress
     block: financial
@@ -109,9 +123,13 @@ signals:
           - { state: watch, op: ">", threshold: 0.0 }
         exit_below: -0.1
     hist:
-      sample: "1993–2024"
+      sample: "1994–2026 (measured 2026-10)"
       insufficient_history: true
-      note: "Only ~3 recessions covered (2001, 2008, 2020)."
+      recessions_covered: 3
+      precision: 0.18
+      recall: 1.0
+      median_lead_months: 6
+      note: "~3 recessions covered; many stress episodes without recession."
 
   # =====================================================================
   # CREDIT
@@ -132,13 +150,13 @@ signals:
         - type: change_over_period
           params: { periods: 63, op: ">", warn: 1.0 }
     hist:
-      sample: "1997–2024"
+      sample: "API limited (~3y) — ICE BofA licence"
       recessions_covered: 3
       insufficient_history: true
       precision: 0.6
       recall: 1.0
       median_lead_months: 6
-      note: "Caught 2001/2008/2020 but flashed in 2011, 2015–16, 2022 without recession."
+      note: "Literature: caught 2001/2008/2020, flashed 2011/2015–16/2022. FRED API serves only ~3y of BAML series — no full backtest possible."
 
   - key: bbb_spread
     block: credit
@@ -155,9 +173,9 @@ signals:
         - type: change_over_period
           params: { periods: 63, op: ">", warn: 0.5 }
     hist:
-      sample: "1997–2024"
+      sample: "API limited (~3y) — ICE BofA licence"
       insufficient_history: true
-      note: "BBB proxy for investment-grade/excess-bond-premium channel (FEDS OOS work)."
+      note: "BBB proxy for investment-grade/excess-bond-premium channel (FEDS OOS work). FRED API serves only ~3y."
 
   - key: sloos_tightening
     block: credit
@@ -172,13 +190,13 @@ signals:
           - { state: watch, op: ">", threshold: 0 }
         exit_below: -5
     hist:
-      sample: "1990–2024 (quarterly)"
+      sample: "1990–2026 (quarterly, measured 2026-10)"
       recessions_covered: 4
       insufficient_history: true
-      precision: 0.75
+      precision: 0.4
       recall: 1.0
-      median_lead_months: 9
-      note: "Net % banks tightening C&I loans; led 2001, 2008, 2020; mild FP ~2016."
+      median_lead_months: 4
+      note: "Net % banks tightening C&I loans; led all covered recessions but FPs in stress episodes; only 4 recessions."
 
   # =====================================================================
   # HOUSING / INVESTMENT
@@ -191,12 +209,12 @@ signals:
       type: yoy
       params: { op: "<", threshold: 0, warn: 3, critical: -10 }
     hist:
-      sample: "1960–2024"
-      recessions_covered: 9
-      precision: 0.6
-      recall: 0.9
-      median_lead_months: 10
-      note: "Housing turns down early; FPs in mid-cycle slowdowns (1966, 1995)."
+      sample: "1966–2026 (measured 2026-10)"
+      recessions_covered: 8
+      precision: 0.11
+      recall: 1.0
+      median_lead_months: 7
+      note: "Permits YoY<0 fires in every slowdown incl. mid-cycle — high recall, low standalone precision. Weight in composite only."
 
   - key: housing_starts_decline
     block: housing
@@ -206,11 +224,12 @@ signals:
       type: yoy
       params: { op: "<", threshold: -10, warn: 2 }
     hist:
-      sample: "1959–2024"
-      recessions_covered: 9
-      precision: 0.7
-      recall: 0.85
-      median_lead_months: 9
+      sample: "1966–2026 (measured 2026-10)"
+      recessions_covered: 8
+      precision: 0.18
+      recall: 1.0
+      median_lead_months: 8
+      note: "YoY<-10% also fires in housing downturns w/o recession (2018, 2023). Confirmatory."
 
   - key: durable_orders_decline
     block: housing
@@ -241,12 +260,12 @@ signals:
           input: { key: icsa, transform: ma4 }
           params: { window: 52, rise_pct: 15, critical_pct: 25 }
     hist:
-      sample: "1967–2024"
+      sample: "1967–2026 (measured 2026-10)"
       recessions_covered: 8
-      precision: 0.7
-      recall: 0.9
-      median_lead_months: 4
-      note: "Short horizon (1–6m) — earliest real-time labor signal."
+      precision: 0.2
+      recall: 1.0
+      median_lead_months: 6
+      note: "Short horizon (1–6m) — earliest real-time labor signal; noisy alone (strikes, reopenings)."
 
   - key: continued_claims_rise
     block: labor
@@ -256,11 +275,11 @@ signals:
       type: rise_from_trough
       params: { window: 104, rise_pct: 10, critical_pct: 20 }
     hist:
-      sample: "1967–2024"
+      sample: "1967–2026 (measured 2026-10)"
       recessions_covered: 8
-      precision: 0.7
-      recall: 0.9
-      median_lead_months: 4
+      precision: 0.35
+      recall: 1.0
+      median_lead_months: 5
 
   - key: temp_help_decline
     block: labor
@@ -283,32 +302,37 @@ signals:
       branches:
         - type: streak
           input: { key: job_openings, transform: value }
-          params: { direction: down, warn_count: 3 }
+          params: { direction: down, warn_count: 2 }
         - type: streak
           input: { key: quits_rate, transform: value }
-          params: { direction: down, warn_count: 3 }
+          params: { direction: down, warn_count: 2 }
     hist:
-      sample: "2000–2024"
+      sample: "2000–2026"
       insufficient_history: true
-      note: "JOLTS covers only 2 recessions (2008, 2020) — statistics meaningless."
+      note: "JOLTS covers only ~3 recessions; measured episodes START inside recessions (2009-01, 2020-05) — coincident deterioration, not a lead. Weight kept for state confirmation."
 
   # =====================================================================
   # COMPOSITE / REAL ACTIVITY
   # =====================================================================
-  - key: lei_oecd_decline
+  - key: cfnaid_weak
     block: composite
     weight: 2
-    input: { key: lei_oecd, transform: value }
+    input: { key: cfnaid, transform: ma3 }
     evaluator:
-      type: streak
-      params: { direction: down, warn_count: 6, critical_count: 9 }
+      type: levels
+      params:
+        levels:
+          - { state: critical, op: "<", threshold: -1.0 }
+          - { state: warning, op: "<", threshold: -0.7 }
+          - { state: watch, op: "<", threshold: -0.35 }
+        exit_above: -0.2
     hist:
-      sample: "1955–2024"
-      recessions_covered: 10
-      precision: 0.7
-      recall: 0.9
-      median_lead_months: 9
-      note: "Conference Board LEI logged its first-ever false positive in 2022–24 — treat corroboratively."
+      sample: "1967–2026 (measured 2026-10)"
+      recessions_covered: 8
+      precision: 0.17
+      recall: 0.38
+      median_lead_months: 8
+      note: "CFNAI-MA3 < -0.7 is near-coincident more than leading (Chicago Fed's own rule: 'recession may have begun'). Replaces USSLIND/LEI — discontinued on FRED in 2020-02."
 
   - key: indpro_decline
     block: composite
@@ -318,12 +342,12 @@ signals:
       type: yoy
       params: { op: "<", threshold: 0, warn: 2 }
     hist:
-      sample: "1948–2024"
-      recessions_covered: 12
-      precision: 0.85
-      recall: 0.8
-      median_lead_months: 2
-      note: "Near-coincident NBER input; short lead — confirmation more than forecast."
+      sample: "1966–2026 (measured 2026-10)"
+      recessions_covered: 8
+      precision: 0.18
+      recall: 0.5
+      median_lead_months: 9
+      note: "YoY<0 also fires in industrial slowdowns (2015–16, 2023–24) — confirmatory. Near-coincident NBER input."
 
   # =====================================================================
   # NOWCAST — "are we already in recession?" (not part of 12m score)
@@ -339,13 +363,12 @@ signals:
           - { state: critical, op: ">=", threshold: 0.5 }
         exit_below: 0.4
     hist:
-      sample: "1949–2024"
-      episodes: 14
-      recessions_covered: 12
-      precision: 0.85
+      sample: "1949–2026 (measured window [-3,+6]m around start)"
+      episodes: 10
+      recessions_covered: 8
       recall: 1.0
       median_lead_months: -3
-      note: "Triggers ~3.4m AFTER official start on average — onset confirmation, not a forecast. FPs: 1959, 1969 (timing), 2024."
+      note: "Triggers ~3.4m AFTER official start on average — onset confirmation, not a forecast. Precision@12m is meaningless here (measured at ±onset window instead). FPs: 1959, 1969 (timing), 2024."
 
   - key: chauvet_piger
     block: nowcast
@@ -359,8 +382,7 @@ signals:
           - { state: critical, op: ">", threshold: 50 }
         exit_below: 15
     hist:
-      sample: "1967–2024"
+      sample: "1967–2026"
       recessions_covered: 8
-      precision: 0.9
       recall: 0.95
-      note: "Smoothed recession probability (Chauvet–Piger), NBER-consistent."
+      note: "Smoothed recession probability (Chauvet–Piger), NBER-consistent. Nowcast: fires at/around starts, not a 12m forecast."

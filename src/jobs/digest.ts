@@ -9,6 +9,7 @@ import { getPrefs, listActiveUsers } from "../data/repositories/users.js";
 import { processDeliveries } from "../publish/publisher.js";
 import { renderDigest } from "../publish/render/templates.js";
 import { computeComposite } from "../signals/score.js";
+import { computePooledProb } from "../signals/pooledProb.js";
 
 /** Daily digest: events of last 24h + active signals + composite, per locale. */
 export async function jobDigest(): Promise<void> {
@@ -22,6 +23,7 @@ export async function jobDigest(): Promise<void> {
     new Map(states.map((s) => [s.signal_key, s])),
     cfg.signals,
   );
+  composite.modelProb = computePooledProb(db);
   const today = new Date().toISOString().slice(0, 10);
 
   const locales = new Set<string>([cfg.channels.defaults.fallback_locale]);

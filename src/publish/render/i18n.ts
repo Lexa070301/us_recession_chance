@@ -25,6 +25,7 @@ export function initI18n(): void {
     fallbackLng: cfg.fallback_locale,
     supportedLngs: cfg.supported_locales,
     interpolation: { escapeValue: false },
+    showSupportNotice: false,
   });
   initialized = true;
 }
