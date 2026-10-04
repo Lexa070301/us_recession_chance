@@ -5,6 +5,7 @@ import { getDb } from "../data/db.js";
 import { t } from "../publish/render/i18n.js";
 import { buildDashboardData } from "./dataJson.js";
 import { evalJson } from "./method.js";
+import { termForSignal } from "./glossary.js";
 import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
@@ -94,6 +95,12 @@ function signalPageHtml(
   <h3>${esc(t(locale, "site.method_rule"))}</h3>
   <pre>${esc(evalJson(def.evaluator))}</pre>
   ${fred ? `<p><a href="${esc(fred)}">${esc(t(locale, "site.signal_source"))} →</a></p>` : ""}
+  ${(() => {
+    const gk = termForSignal(def.key);
+    return gk
+      ? `<p><a href="../../glossary/${gk}/">${esc(t(locale, "site.signal_glossary_link", { term: t(locale, `glossary.${gk}.title`) }))} →</a></p>`
+      : "";
+  })()}
   ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.signals_title"))}</a> · <a href="../../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;

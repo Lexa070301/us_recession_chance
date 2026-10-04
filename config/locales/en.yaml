@@ -75,7 +75,20 @@ site:
     ## Data
     All indicator data comes from FRED (Federal Reserve Bank of St. Louis). Recession dating follows the NBER business-cycle chronology. Historical analysis uses ALFRED vintages — the data as it was originally published, not the revised history — so backtests reflect what was knowable at the time.
   glossary_title: "Glossary"
-  glossary_intro: "The concepts behind the signals, in plain language."
+  glossary_intro: "The concepts behind recession watching, in plain language — from the signals this site tracks to the data methodology underneath."
+  glossary_related_signals: "Tracked on this site"
+  glossary_related_episodes: "Episodes where it mattered"
+  glossary_see_also: "See also"
+  signal_glossary_link: "Glossary: {{term}}"
+  glossary_cluster:
+    core: "How this site works"
+    recessions: "Anatomy of recessions"
+    rates: "Yield curve & rates"
+    credit: "Credit & financial conditions"
+    labor: "Labor market"
+    activity: "Real activity"
+    inflation: "Inflation & prices"
+    method: "Data & methodology"
   faq_title: "Frequently asked questions"
   faq_desc: "How the composite score works, where the data comes from, and what the risk bands mean."
   faq:
@@ -332,6 +345,346 @@ glossary:
       ## Why a sum, not a model
         A fitted model (logit/probit) can squeeze more precision out of the same panel — but its coefficients are opaque and unstable out of sample. The weighted sum is fully auditable: every point of the score can be attributed to a specific signal, which matters more for a public monitor than fractional accuracy gains.
       > **Fact:** The score deliberately includes no stock-market series and no sentiment surveys — every input is a physical-activity or credit-measurement series, on the principle that recessions are confirmed in the real economy, not in expectations.
+  business_cycle:
+    title: "The business cycle"
+    desc: "The recurring expansion-contraction rhythm of economies — and where recessions sit inside it."
+    body: |
+      Economies do not grow in straight lines. They oscillate around a long-run trend in recognizable phases: expansion, peak, contraction (recession), and trough — then the next expansion begins. This rhythm is the business cycle, and tracking where we are inside it is the entire point of a recession monitor.
+      ## It's not a metronome
+      Cycles have no fixed length: US expansions have lasted from 12 months (1981–82) to 128 months (2009–2020). What recurs is the *sequence* — credit tightens, leading indicators roll over, activity contracts, policy eases, recovery begins. The timing varies; the mechanics rhyme.
+      ## Why it matters here
+      Every signal on this site maps to a phase transition in the cycle: the yield curve and housing permits sense the approaching peak; claims and the Sahm rule confirm the contraction; spreads widening mark the credit stress that usually accompanies it.
+      > **Fact:** The NBER has dated 34 complete US business cycles since 1857. The average expansion since WWII lasts about 65 months; the average recession about 11.
+  soft_landing:
+    title: "Soft landing"
+    desc: "When the Fed slows inflation without triggering a recession — the rarest outcome in the playbook."
+    body: |
+      A soft landing is a tightening cycle that brings inflation back to target without tipping the economy into recession — the policy equivalent of a carrier landing in bad weather. The alternative, a hard landing, is a tightening cycle that ends in contraction.
+      ## Why it's rare
+      Tightening works through exactly the channels that produce recessions: higher rates squeeze credit, housing, and hiring. The Fed has engineered arguably only one clean soft landing — 1994–95 under Greenspan — out of more than a dozen post-war hiking cycles.
+      ## The 2023–24 test case
+      The deepest yield-curve inversion since Volcker predicted recession; instead, inflation fell while unemployment stayed low — a soft landing that made the 2023–24 episode the longest curve false alarm on record. This site tracks it as a dedicated episode precisely because it is the counterexample every curve watcher needs to respect.
+      > **Fact:** Alan Blinder's history of Fed tightening found most 'soft landings' still involved meaningful slowdowns — the pristine version, disinflation with no growth cost at all, is rarer still.
+  double_dip:
+    title: "Double-dip recession"
+    desc: "Two recessions separated by a short expansion — how 1980–82 became the canonical example."
+    body: |
+      A double dip is two distinct recessions joined by a recovery too brief to restore the economy — a W-shaped path instead of a V. The textbook case is 1980 and 1981–82: a six-month contraction, twelve months of expansion, then a 16-month recession deeper than the first.
+      ## Why it happens
+      Double dips usually trace back to policy or unfinished shocks. In 1980–81, Volcker's Fed eased when inflation dipped, saw it rebound, and slammed rates back up — the second recession was the price of crushing inflation that the first recession failed to finish.
+      ## Why it matters for signals
+      Double dips confound signal interpretation: indicators can stay elevated through the 'recovery' or re-fire after briefly clearing. This site lists 1980 and 1981–82 as separate episodes — matching NBER's treatment — so the signal record shows both dips independently.
+      > **Fact:** NBER counts 1980 and 1981–82 as two recessions, but most economists treat 1980–82 as one long crisis — the 'recovery' year never restored prior employment or output peaks.
+  growth_recession:
+    title: "Growth recession"
+    desc: "Below-trend growth without an outright contraction — the gray zone between expansion and recession."
+    body: |
+      A growth recession is a period when the economy still grows, but below its potential pace — jobs are added too slowly to keep unemployment flat and real incomes stagnate. It feels like a recession to households while failing every technical recession test.
+      ## Why it matters
+      Growth recessions explain episodes where signals flash yellow without a recession following — activity decelerates enough to push some indicators toward their thresholds but not enough for the NBER definition. 2015–16 was a classic: an industrial and oil-sector downturn that never became an economy-wide contraction.
+      ## The signal interpretation
+      This is where weighted composite scoring earns its keep — in a growth recession a few signals fire while the rest hold, keeping the score in 'elevated' rather than 'high'. Reading signals in isolation would overcall these episodes; the panel as a whole usually doesn't.
+      > **Fact:** The term was coined by economist Solomon Fabricant to describe exactly this pattern: growth positive enough to avoid the 'recession' label, weak enough to raise unemployment.
+  output_gap:
+    title: "Output gap"
+    desc: "The distance between actual GDP and the economy's potential — the theoretical core of the cycle."
+    body: |
+      Potential GDP is what the economy could produce at full employment of labor and capital; the output gap is actual GDP minus that potential. A negative gap means idle capacity — the formal definition of slack; a positive gap means overheating, which feeds inflation.
+      ## Why you can't observe it
+      The gap is an estimate, not a measurement — potential output is inferred from trends and models, and estimates are revised for years. CBO's historical gap estimates have been rewritten substantially, which is why real-time gap readings are a fragile input for decisions.
+      ## Where it shows up indirectly
+      Most recession signals are gap proxies in disguise: claims, industrial production, and sales all measure whether the economy is running below capacity. The composite score is, in effect, a real-time, signal-based estimate that the output gap is widening — without waiting for the theoretical series.
+      > **Fact:** Okun's law — the empirical link between the output gap and unemployment — is one of the most stable relationships in macro, which is why labor signals confirm downturns so reliably.
+  resteepening:
+    title: "Yield curve re-steepening"
+    desc: "When an inverted curve un-inverts — and why that's often worse news, not better."
+    body: |
+      After months of inversion, the curve eventually normalizes — long yields rise back above short ones. Counterintuitively, this 're-steepening' is historically a *worse* omen than the inversion itself: it typically happens because the Fed is cutting in response to deteriorating conditions.
+      ## Two ways to steepen
+      Bull steepening: short rates collapse because cuts are underway — the recessionary path, seen in 2001, 2007–08, and 2020. Bear steepening: long rates rise on term-premium or inflation repricing — less reliably ominous. Which kind of steepening is happening matters as much as the steepening itself.
+      ## The historical pattern
+      In most post-war cycles, inversion gave the early warning and re-steepening announced the recession's actual proximity — often firing just before or around the onset. That's why this site treats re-steepening as its own signal rather than celebrating an inverted curve 'healing'.
+      > **Fact:** The 10Y–2Y curve re-steepened in September 2024 — right on schedule for the pattern — yet no recession followed, making it one of the rare cycles where even the second act of the script failed to produce a downturn.
+  bear_steepener:
+    title: "Bear vs bull steepening"
+    desc: "Two opposite mechanisms can un-invert the curve — one signals relief, the other recession."
+    body: |
+      'Steepening' just describes the slope widening — but the cause flips its meaning. Bull steepening is short rates plunging as the Fed cuts into weakness: bond traders are buying duration against a downturn. Bear steepening is long rates rising — on inflation repricing, term-premium normalization, or fiscal supply.
+      ## Why the distinction matters
+      A curve can de-invert for good reasons (the bear path, if long rates normalize without growth damage) or bad ones (the bull path, where the Fed is already fighting a recession). The curve's level says 'normalizing'; the composition says whether to worry.
+      ## Reading it on this site
+      Our re-steepening signal watches the spread crossing back above zero — the historically ominous transition. For the mechanism, compare with the rate context: re-steepening driven by collapsing short rates has preceded recession onset far more often than re-steepening driven by rising long rates.
+      > **Fact:** In 2007 the curve un-inverted via bull steepening — cuts began in September 2007, and the recession officially started three months later, almost to script.
+  treasury_yield:
+    title: "Treasury yields"
+    desc: "The risk-free rates every recession signal is built on — what sets them and what they encode."
+    body: |
+      Treasury yields are the interest rates the US government pays to borrow — from 4-week bills to 30-year bonds. Because default risk is treated as zero, each maturity is a pure read on rate expectations, inflation compensation, and the term premium investors demand for duration.
+      ## Short end vs long end
+      The short end (3M–2Y) tracks expected Fed policy almost mechanically. The long end (10Y+) prices the entire future: growth expectations, inflation risk, term premium, and global demand for safe assets. The gap between them — the slope — is what makes the yield curve a signal.
+      ## Why we watch 10Y–3M and 10Y–2Y
+      The 10Y–3M spread is the Fed's preferred recession gauge — the New York Fed builds its recession-probability model on it. The 10Y–2Y is the market's favorite and reacts earlier. This site tracks both, because they occasionally disagree — and disagreement itself is information.
+      > **Fact:** Treasury math runs through every financial asset — the 10Y yield is the discount rate in equity valuations, the base for mortgage rates, and the anchor for every credit spread on this site.
+  term_premium:
+    title: "Term premium"
+    desc: "The extra yield investors demand for locking up money — the hidden component inside long rates."
+    body: |
+      A 10-year yield bundles two things: the market's expectation of average short rates over the decade, plus a term premium — compensation for bearing duration risk and uncertainty. When inversion analysis talks about 'expectations', it quietly assumes the term premium isn't doing the talking.
+      ## Why it muddies the curve signal
+      Term premium has been negative for stretches of the past decade — investors paid to hold duration. That mechanically inverts the curve even with neutral rate expectations, which is part of the honest debate about whether inversion 'worked' in 2022–24 or measured something different.
+      ## Where it shows up
+      Bear-steepening episodes — like much of the 2023–24 normalization — are often term-premium repricing in disguise: long rates rising while rate expectations stay flat. Watching the composition of the curve move, not just its sign, separates signal from arithmetic.
+      > **Fact:** The New York Fed's ACM estimate pegged 10Y term premium as low as −1% in 2020 — meaning raw spreads understated how restrictive expected policy actually was.
+  fed_funds_rate:
+    title: "The federal funds rate"
+    desc: "The Fed's main policy lever — the rate at the short end of every yield-curve signal."
+    body: |
+      The federal funds rate is the overnight rate banks charge each other for reserves — the number the FOMC actually sets, announced as a target range. Every other rate in the economy keys off it: prime lending, credit cards, mortgages, and the short leg of the yield curve.
+      ## From policy rate to recession
+      Tightening cycles raise the front of the curve; if markets expect eventual cuts, the long end stays put and the curve inverts. The pattern behind most post-war recessions is the same script: inflation overheats → Fed hikes → curve inverts → credit and housing crack → recession → Fed cuts.
+      ## The level matters too
+      How restrictive the rate is depends on inflation — a 5% funds rate with 8% inflation is a different stance than 5% with 2%. Real (inflation-adjusted) rates, not nominal ones, do the damage. It's why the curve inverts *before* damage appears: the market prices the consequence while the level is still rising.
+      > **Fact:** Volcker's funds rate peaked at 20% in 1981 — the highest ever — and the prime rate hit 21.5%. Unemployment reached 10.8%; inflation fell from double digits to under 4% within three years.
+  qe_qt:
+    title: "QE and QT"
+    desc: "Quantitative easing and tightening — how the Fed's balance sheet moves long rates and liquidity."
+    body: |
+      Beyond the policy rate, the Fed steers conditions with its balance sheet. Quantitative easing buys Treasuries and MBS — pushing long rates down and flooding the system with reserves. Quantitative tightening lets the portfolio run off — draining reserves and letting term premium normalize.
+      ## Why it bends the signals
+      QE compresses term premium mechanically, which can invert the curve without any change in rate expectations — one of the legitimate critiques of the 2022–24 inversion signal. Symmetrically, QT can tighten financial conditions in ways the funds rate alone misses.
+      ## The interaction with our panel
+      Balance-sheet policy shows up in the monitor indirectly: through term-premium distortion of curve signals, through liquidity-sensitive NFCI components, and through credit spreads. It's a reminder that no single indicator reads policy stance in isolation — the panel diversifies across channels.
+      > **Fact:** The Fed's balance sheet peaked near $9 trillion in 2022 — roughly 35% of GDP — versus under $1 trillion before 2008. QE moved from emergency tool to standard instrument in one decade.
+  high_yield:
+    title: "High-yield bonds"
+    desc: "Junk bonds — the corporate borrowers closest to default, and the fastest credit barometer."
+    body: |
+      High-yield bonds are corporate debt rated below investment grade (BB and lower) — issued by leveraged companies that pay up for capital. The segment exists because investors trade default risk for yield; in calm times the premium is thin, in stress it explodes.
+      ## Why HY spreads lead
+      Junk issuers fail first when the economy turns, so HY spreads reprice earliest and most violently — typically jumping from ~3% to 8–10%+ in recessions. Equity can shrug off stress for months; credit cannot — refinancing is existential for leveraged issuers.
+      ## On this monitor
+      The HY OAS signal fires when the spread crosses its threshold — a widening credit-risk premium that has preceded or accompanied every modern downturn, including the 2015–16 oil bust that didn't become a recession (the honest kind of false positive a credit signal should occasionally produce).
+      > **Fact:** In October 2008 HY spreads spiked past 20% — pricing a depression-scale default wave. Actual realized defaults peaked near 14% — even distressed credit overshot reality at the panic's depth.
+  credit_crunch:
+    title: "Credit crunch"
+    desc: "When banks stop lending — the supply-side collapse that turns slowdowns into recessions."
+    body: |
+      A credit crunch is a sharp contraction in lending *supply* — banks pulling back not because borrowers don't want loans, but because lenders are impaired, scared, or capital-constrained. Demand may be there; the money isn't.
+      ## How it compounds a downturn
+      Healthy slowdowns self-correct: demand dips, rates fall, activity rebounds. A crunch breaks that loop — creditworthy firms can't roll debt, households can't get mortgages, and viable businesses die for lack of liquidity rather than lack of demand. It's the mechanism that made 2008–09 severe rather than ordinary.
+      ## How we detect it
+      Direct measures: the SLOOS lending-standards survey captures banks tightening credit before volumes collapse. Indirect measures: credit spreads and the NFCI price the market side of the same phenomenon. The 1990–91 recession is the clean historical example — a bank- and S&L-driven crunch with the curve only mildly inverted.
+      > **Fact:** After 2008, researchers estimated the credit supply contraction explained roughly a third of the employment decline — the recession's depth was a lending phenomenon as much as a demand one.
+  lending_standards:
+    title: "Bank lending standards"
+    desc: "The SLOOS survey — how banks' willingness to lend tightens before the credit actually disappears."
+    body: |
+      The Fed's Senior Loan Officer Opinion Survey asks bank credit officers a simple question each quarter: are you tightening or easing lending standards? It's a survey — opinion, not transaction data — but the people answering are the ones who decide whether the loan gets made.
+      ## Why it leads
+      Banks tighten standards *before* loan volumes fall: standards shift with the outlook, volumes follow months later when credit actually dries up. SLOOS tightening waves preceded the 1990, 2001, 2008, and 2020 recessions — and the 2023 tightening that famously didn't produce one.
+      ## Strengths and blind spots
+      The survey captures intent — supply-side restriction that aggregates poorly into any market price. Its blind spot is that it's self-reported and qualitative; strong tightening readings resolved into recessions in some cycles (2008) and into nothing in others (2023), which is why it shares the credit block with market-priced signals.
+      > **Fact:** SLOOS has run since 1967 — making it one of the oldest continuous soft-data series in US macro, and one of the few that survived relevance-testing through five recessions.
+  liquidity:
+    title: "Liquidity"
+    desc: "Whether markets can absorb trades without breaking — the invisible variable behind spreads and stress."
+    body: |
+      Liquidity is the ability to buy or sell an asset quickly at a fair price. In calm times it's invisible — trades clear instantly. In stress it evaporates: bid-ask spreads explode, 'risk-free' Treasuries gap, and selling pressure feeds on itself because there's no one to sell to.
+      ## Why recessions involve it
+      Credit stress is liquidity stress: widening spreads partly reflect not default expectations but the disappearing market for risky assets. The March 2020 episode showed the extreme — even Treasuries briefly lost liquidity, forcing Fed intervention not because of solvency but because the plumbing froze.
+      ## Where it shows up in the panel
+      Liquidity conditions flow into the NFCI and STLFSI components — volatility, spreads, funding-market stress are all partially liquidity measures. There's no single liquidity gauge in the panel because liquidity is a *state of the market*, visible through its symptoms rather than a headline number.
+      > **Fact:** On March 19, 2020, liquidity in the Treasury market — the deepest market on Earth — briefly broke down so badly the Fed bought $75B in a single day to restore it.
+  jobless_claims:
+    title: "Jobless claims"
+    desc: "Weekly initial and continued unemployment filings — the fastest real-economy data that exists."
+    body: |
+      Initial claims count people filing for unemployment benefits for the first time — a weekly, near-real-time count of layoffs. Continued claims count people still collecting benefits — a slower read on how hard it is to find the next job. Together they're the highest-frequency labor data published.
+      ## Initial vs continued
+      Initials spike at recession onset — the firing wave. Continueds rise later and stay elevated — the hiring freeze after the firing. 2020 made the distinction dramatic: initials exploded to 6 million in a week while continueds built over months. A downturn where continueds keep grinding up is deeper than one where initials spike and fade.
+      ## The 4-week average
+      Weekly claims are noisy — holidays, weather, backlog events all distort single prints. The four-week moving average is the standard filter and the input to this site's claims signals: it smooths noise without delaying the turn, catching the sustained rise that marks real labor deterioration.
+      > **Fact:** The April 2020 claims surge — 6.9 million in one week — was roughly 30× the pre-pandemic norm and more than all of 2008–09's worst months combined.
+  payrolls:
+    title: "Nonfarm payrolls"
+    desc: "The monthly jobs report — the single most-watched US data release and the NBER's core input."
+    body: |
+      Nonfarm payrolls — the monthly establishment-survey count of US jobs — is the headline release of the US data calendar. Published by the BLS on the first Friday of each month, it's the closest thing to a real-time employment census and one of the NBER's key recession-dating inputs.
+      ## Why it moves markets and datings
+      Payrolls captures breadth — losses across sectors, hours worked, wages — not just the count. The NBER committee explicitly weights employment heavily; sustained negative payrolls have coincided with every dated recession. Revisions matter enormously: benchmark revisions have rewritten entire year's worth of job growth.
+      ## The noise caveat
+      The survey has a ±100k margin of error around the headline and faces two revisions plus annual benchmark restating — the July and August prints you see are drafts, not final answers. On this site, payrolls inform context rather than driving a dedicated signal: labor-market trend is read through claims, unemployment rates, and temp help, which are less revision-prone.
+      > **Fact:** The January 2025 benchmark revision erased nearly 600,000 phantom jobs from the 2024 tally — a reminder that even flagship series are estimates, not counts.
+  u3_u6:
+    title: "U-3 vs U-6 unemployment"
+    desc: "Two unemployment rates — the headline number and the broader slack measure that reveals underemployment."
+    body: |
+      U-3 is the headline unemployment rate: people without a job who are actively looking. U-6 widens the lens — it adds part-timers who want full-time work and discouraged workers who've stopped searching. The gap between them measures hidden slack the headline misses.
+      ## Why the gap matters
+      Recessions show up differently in the two series: U-3 moves on outright layoffs; U-6 also captures the slower damage — involuntary part-time, workers giving up search entirely. After 2008, U-3 peaked at 10% while U-6 hit 17% — nearly double the visible slack.
+      ## Where it shows up
+      The Sahm rule uses U-3 — the cleaner, lower-noise series — because its 0.5pp trigger was calibrated on the headline. But the U-6 divergence is worth watching around a downturn: a cycle where U-6 stays high while U-3 falls usually means the recovery is weaker than the headline claims.
+      > **Fact:** The BLS publishes six unemployment rates (U-1 through U-6). U-3 counts about half the labor-force pain that U-6 does — the choice of definition can nearly double the measured distress.
+  jolts_quits:
+    title: "JOLTS and the quits rate"
+    desc: "Job openings, hires, and quits — the labor market's confidence gauge in three numbers."
+    body: |
+      JOLTS — the Job Openings and Labor Turnover Survey — counts three flows monthly: openings (demand), hires (matching), and quits (worker confidence). Together they map the labor market's plumbing in a way the unemployment rate can't.
+      ## The quits signal
+      Workers quit when they have alternatives — quits fall when confidence in finding the next job collapses, typically ahead of layoff waves. Openings tell the demand side: the post-COVID record was roughly 2 openings per unemployed person; normalization below 1:1 has preceded every recession in the sample.
+      ## On this monitor
+      Our JOLTS flows signal tracks openings-per-unemployed and quits momentum — the demand/confidence pair that rolls over before payrolls do. It's a survey series with revisions, which is why it confirms rather than triggers: when openings fall, quits fall, and claims rise together, the labor market has turned.
+      > **Fact:** The Beveridge curve — openings vs unemployment — shifted dramatically after 2020: openings collapsed from 12M to 7M with almost no rise in unemployment, a historically unusual 'vertical' normalization.
+  temp_help:
+    title: "Temporary help services"
+    desc: "Staffing-agency employment — the labor category that turns before every recession."
+    body: |
+      Temporary help is employment at staffing agencies — workers who can be released without severance, notice, or headline risk. That disposability makes it the labor market's leading edge: firms cut temps before they cut permanent staff.
+      ## Why it leads
+      Temps are procyclical by construction — they're the buffer firms build precisely to absorb downturns. Temp employment has peaked and turned down before every recession since 1990, typically by 6–12 months: demand weakens → temps go first → permanent layoffs follow only when the weakness proves durable.
+      ## On this monitor
+      The temp-help decline signal tracks sustained year-over-year contraction in the series — persistent enough to indicate real labor-market softening, not noise. It's one of the quieter signals on the panel but one of the earliest: by the time payrolls turn, temps have been falling for quarters.
+      > **Fact:** Temp help fell for six straight months before the 2001 recession's start and twelve months before 2008's — the longest advance notice any labor series gives.
+  industrial_production:
+    title: "Industrial production"
+    desc: "Manufacturing, mining, and utilities output — the real-economy pulse behind half the activity signals."
+    body: |
+      The Fed's industrial production index measures physical output — factories, mines, utilities — monthly. It's a volume measure, not a value one: it counts what got made, not what it sold for. That makes it the cleanest monthly read on the goods economy.
+      ## What it captures — and misses
+      Manufacturing is only ~10% of US GDP now, but it's the most cyclical tenth — goods demand collapses first in downturns, services last. IP is an NBER recession-dating input: sustained declines in production coincide with nearly every dated contraction. 2015–16 showed the limit: a manufacturing recession that never spread to the rest of the economy.
+      ## On this monitor
+      The IP decline signal tracks sustained weakness in the series; the CFNAI — which embeds IP among its 85 components — adds breadth by confirming whether the production decline is isolated or economy-wide. IP alone can produce sector-specific false positives; the composite absorbs that.
+      > **Fact:** IP fell 17% between February and April 2020 — the fastest industrial collapse on record, faster than any month of the Depression — then recovered most of it within a year.
+  housing_permits:
+    title: "Building permits & housing starts"
+    desc: "Residential construction — the most rate-sensitive sector and a classic leading indicator."
+    body: |
+      Building permits are authorizations to build; housing starts are ground-breaking. Both lead actual construction and sales by months, and both sit at the extreme rate-sensitive end of the economy — housing is bought almost entirely with borrowed money.
+      ## Why housing leads recessions
+      The transmission is mechanical: the Fed hikes → mortgage rates jump → affordability collapses → permits fall → construction contracts → jobs and spending follow. Housing has contracted before nearly every post-war recession, often by more than a year — the sector 'starts' recessions as much as it signals them.
+      ## On this monitor
+      Two housing signals watch the pipeline: permits (the forward-looking authorization) and starts (the actual commitment). Both track sustained decline rather than a single weak print — housing data is noisy month-to-month, but a persistent downtrend has been one of the most reliable lead indicators in the panel.
+      > **Fact:** Housing permits peaked in 2005 — two full years before the Great Recession began. The 2007–09 downturn was foretold in the housing data longer and louder than in any financial market.
+  durable_goods:
+    title: "Durable goods orders"
+    desc: "Orders for big-ticket manufactured items — the business-investment barometer."
+    body: |
+      Durable goods are products meant to last three years or more — machinery, aircraft, vehicles, computers. The monthly orders report captures what businesses are willing to commit to expensive, long-lived capital: a vote of confidence in future demand.
+      ## Why it leads
+      Capex decisions are forward-looking and instantly reversible — firms postpone big orders the moment the outlook dims, long before they cut staff. Durable orders have turned down ahead of most recessions; the catch is extreme volatility: a single aircraft order can swing the monthly print wildly.
+      ## Reading it on this site
+      Our durable-orders signal watches the trend rather than the month — sustained decline in orders signals business retrenchment. Because one Boeing order can distort a print, the signal requires persistence: the noise floor on durable goods is the highest in the panel, and the threshold is tuned accordingly.
+      > **Fact:** Ex-transportation is the cleaner read — Boeing and defense orders create headline spikes that say nothing about underlying business confidence.
+  ism_pmi:
+    title: "ISM / PMI surveys"
+    desc: "Purchasing-manager surveys — the monthly soft-data read on manufacturing and services health."
+    body: |
+      The ISM Purchasing Managers' Index surveys hundreds of company purchasing managers monthly: are orders, production, hiring, and deliveries improving or worsening? Readings above 50 indicate expansion, below 50 contraction — and 50 is exactly where the recession line runs.
+      ## Soft data, hard record
+      Surveys feel like opinion, but purchasing managers are reporting actual order flow — they're closer to the ground than GDP. Manufacturing PMI has dipped below 48 ahead of or during nearly every post-war recession; the services version held up longer in goods-led slowdowns like 2015–16.
+      ## Strengths and limits
+      PMIs are fast (first business day of the month) and comprehensive, but they're direction-of-change measures — they say whether things are getting better or worse, not how much. On this site PMI-style data appears through the CFNAI, which incorporates ISM components among its 85 series — breadth over any single survey.
+      > **Fact:** The manufacturing PMI spent over a year below 50 in 2023–24 without a recession — the 'rolling recession' that hit goods while services kept the headline economy growing.
+  gdp_vs_gdi:
+    title: "GDP vs GDI"
+    desc: "Two ways to measure the same economy — and why they sometimes disagree about recessions."
+    body: |
+      GDP measures the economy from the spending side; GDI (gross domestic income) measures it from the income side — wages, profits, interest. In theory they're the same number; in practice they diverge by hundreds of billions and occasionally tell different stories about whether a recession has begun.
+      ## When they disagree
+      The 2022 episode made it famous: GDP contracted in Q1 and Q2 (the 'technical recession' headlines) while GDI grew — and GDI was right: no recession was dated, employment never broke. GDI has historically been the more recession-accurate measure, though the 2007–08 divergence ran the other way.
+      ## Why the monitor doesn't track either
+      Quarterly, heavily revised, and available only with delay — GDP and GDI are too slow for a recession signal. But the divergence episodes matter for interpretation: when GDP and income data disagree, the income side's record on recession timing is slightly better — which is why labor and income signals anchor our nowcast.
+      > **Fact:** GDP and GDI diverged by a full percentage point of output in 2022 — the largest gap in decades — and the 'GDP contracted, no recession' puzzle resolved entirely in GDI's favor.
+  cpi_vs_pce:
+    title: "CPI vs PCE inflation"
+    desc: "The two main US inflation measures — and why the Fed watches the one nobody quotes."
+    body: |
+      CPI is the consumer-price index — the one in headlines, COLA adjustments, and TIPS. PCE is the personal-consumption-expenditures deflator — the Fed's official target, broader in scope and smoother in weighting. They usually move together but can diverge meaningfully at turning points.
+      ## Why the Fed prefers PCE
+      PCE weights adjust dynamically — it captures substitution (buying chicken when beef spikes) that fixed-basket CPI misses. It's also broader: healthcare paid by employers and government counts in PCE but not CPI. The Fed's 2% target is in PCE terms; headline CPI typically runs ~0.3–0.4pp hotter.
+      ## Why it matters for signals
+      Inflation drives the policy response — the rate path that inverts curves and cracks housing. The 2021–22 episode showed why composition matters: headline CPI hit 9% on energy and goods while core PCE ran cooler; the Fed's tightening decision tracked the core measure, and so did the recession risk that followed.
+      > **Fact:** TIPS breakevens — the inflation implied by bond prices — matched PCE almost exactly through 2021–22 even while CPI overshot: bond markets were pricing the Fed's measure, not the headline.
+  core_inflation:
+    title: "Core vs headline inflation"
+    desc: "Stripping food and energy — why the 'boring' inflation number is the one that drives policy."
+    body: |
+      Headline inflation counts everything; core strips food and energy — the two most volatile components. The exclusion isn't about what households pay; it's about what the data can reveal: energy spikes are supply shocks that pass, while core captures the sticky, demand-driven inflation that policy has to fight.
+      ## The 1970s lesson
+      The Fed's great inflation mistake was reacting to headline: oil shocks pushed CPI up, the Fed eased when it fell, and underlying inflation kept building through three successive waves. Core inflation was the measure that showed the problem was never solved — a lesson that shaped Volcker's refusal to stop at the first dip.
+      ## Signal implications
+      Core determines the rate path — and the rate path determines the yield curve, housing, and credit conditions that drive the composite score. When headline and core diverge (like 2022: CPI 9%, core PCE ~5%), the recession signal ambiguity reflects genuine uncertainty about how far the Fed must go.
+      > **Fact:** Shelter — the largest core component — lags market rents by 12+ months in the data: the Bureau of Labor Statistics samples leases, which reset slowly. Core inflation is literally measuring last year's housing market.
+  breakevens:
+    title: "Inflation breakevens"
+    desc: "The inflation rate implied by TIPS — the market's real-time inflation forecast."
+    body: |
+      TIPS (inflation-protected Treasuries) pay a real yield; nominal Treasuries pay a nominal one. The difference between them — the breakeven — is the inflation rate the bond market is pricing in. A 10-year breakeven of 2.3% means markets expect 2.3% average inflation over the decade.
+      ## What it's actually measuring
+      Breakevens aren't a pure inflation forecast — they bundle inflation expectations with an inflation-risk premium and liquidity effects. In crisis moments they can under- or over-shoot: 2008 breakevens collapsed below zero on deflation panic even as the Fed was certain inflation would return.
+      ## Why the panel cares
+      Breakevens aren't a recession signal directly, but they shape the context: a curve inverting *because* breakevens are falling (recession fear) means something different from one inverting on rate expectations alone. And they validate the policy stance: if breakevens are rising while the Fed hikes, tightening is failing — the curve signal is about the consequences.
+      > **Fact:** In late 2008, 5-year breakevens went negative — markets literally priced deflation. They were wrong within a year; the TIPS market was pricing panic, not probability.
+  stagflation:
+    title: "Stagflation"
+    desc: "Inflation rising while the economy stalls — the policy nightmare of the 1970s."
+    body: |
+      Stagflation combines what standard models said couldn't coexist: high inflation and stagnant growth with rising unemployment. The 1973–75 episode was the canonical case — the oil embargo quadrupled energy prices, forcing the Fed to choose between fighting inflation (worsening unemployment) and supporting growth (worsening inflation). It chose both, sequentially, and got both.
+      ## Why it's the hardest case
+      Normal recessions are demand failures — stimulus fixes them. Stagflation is a supply failure: the economy's capacity itself shrank, so stimulating demand only feeds inflation. The cure — Volcker's 20% rates — required inflicting a recession severe enough to break the inflation psychology.
+      ## Why it still matters
+      2022 raised the specter again: 9% CPI with an inverting curve. The difference from the 1970s was expectations — breakevens stayed anchored near 2%, meaning the supply shock hadn't become embedded. That's the distinction that determined whether a single recession or a decade of stagflation followed.
+      > **Fact:** The misery index — unemployment plus inflation — peaked at 22% in mid-1980. It's never been close since; the index is why 1970s stagflation felt categorically worse than any recession after.
+  seasonal_adjustment:
+    title: "Seasonal adjustment"
+    desc: "Removing predictable calendar patterns — the invisible preprocessing on nearly every series."
+    body: |
+      Nearly every headline economic series is 'seasonally adjusted' — raw counts like January layoffs or December retail sales are dominated by calendar effects that would drown the underlying signal. Adjustment strips the predictable annual pattern to reveal the actual trend.
+      ## Why it matters for signals
+      Seasonal factors are estimated, not fixed — they're recalculated every year, which means the 'adjusted' number for last January gets quietly revised for years after. It's a hidden source of revisions layered on top of the headline revisions this site already tracks.
+      ## The pandemic's lesson
+      COVID broke seasonal models: the April 2020 collapse was so far outside the historical pattern that adjustment factors swung violently. Several series were re-estimated under 'outlier' treatment to keep the calendar from being recalibrated by a one-off catastrophe — a reminder that the preprocessing is a model with assumptions, not a mechanical correction.
+      > **Fact:** Unadjusted jobless claims and adjusted claims diverged by over a million in some 2020 weeks — the seasonal model expected a post-Easter layoff wave that pandemic timing made meaningless.
+  nowcasting:
+    title: "Nowcasting"
+    desc: "Estimating the present from incomplete data — the discipline behind real-time recession detection."
+    body: |
+      Official recession dating arrives months late; quarterly GDP arrives weeks late and gets revised for years. Nowcasting estimates the current state of the economy from the data that exists *now* — weekly claims, monthly production, daily credit spreads — rather than waiting for the official releases.
+      ## How it differs from forecasting
+      A forecast asks what the economy will do; a nowcast asks what it's doing right now. The distinction matters practically: a nowcast-based signal (Sahm rule, Chauvet–Piger probabilities) timestamps onset within weeks; a forecast-based signal (yield curve) warns months ahead. Confusing them — treating a nowcast as a prediction — is the most common recession-watching error.
+      ## On this monitor
+      The panel separates the two: forecast signals drive the composite score, nowcast signals confirm or veto whether a recession may already be underway. The Chauvet–Piger probability — our nowcast-block recession estimate — is computed on the same data the NBER weighs, but published monthly rather than after the fact.
+      > **Fact:** The Atlanta Fed's GDPNow — the most famous nowcast — routinely beats the consensus forecast for quarterly GDP on the day before release, using only already-published data.
+  base_rate:
+    title: "Base rates & false positives"
+    desc: "Why any recession signal will sometimes cry wolf — and how the base rate sets your expectations."
+    body: |
+      US recessions occupy roughly 15% of months since 1950 — that's the base rate. A signal that fired randomly would still 'predict' recessions at that frequency; a signal that fires too often or too rarely tells you less than it seems. Every recession indicator must be read against this baseline.
+      ## The false-positive problem
+      The yield curve's record — 8 correct calls, 2 false alarms since 1966 — is extraordinary by indicator standards, but it means even the best single signal is wrong a meaningful fraction of the time. Lesser indicators are worse: inverted credit spreads, PMI dips, and claims spikes all produce regular false positives. The question is never 'did it fire?' but 'what does firing imply against the base rate?'
+      ## How the composite handles it
+      Individual signals carry limited information; a panel of 20 signals firing together is much harder to dismiss. Our composite score weights the whole panel — a single isolated warning moves the score modestly, while broad confirmation pushes into the high/severe bands where the historical hit rate is far better.
+      > **Fact:** Samuelson's quip that the stock market 'predicted nine of the last five recessions' understates it — by some counts equity bear markets have produced ~50% more recession calls than recessions since WWII.
+  hard_vs_soft_data:
+    title: "Hard vs soft data"
+    desc: "Measured activity vs reported sentiment — the two kinds of evidence and when each lies."
+    body: |
+      Hard data measures what happened: payrolls, industrial production, claims, credit spreads. Soft data measures what people report: PMI surveys, consumer sentiment, lending-standard questionnaires. Both fail in characteristic ways — hard data is slow and revised, soft data is fast but can capture mood rather than fact.
+      ## When each misleads
+      Soft data failed famously in 2022–24: sentiment and PMIs implied recession for over a year while employment never broke. Hard data fails the other way: 2020 was real before any lagging statistic could confirm it. The Fed's 2019 rate cuts were justified by soft-data deterioration that hard data later confirmed — then again, 2023 showed the opposite resolution.
+      ## How the panel uses both
+      Our signals are deliberately hard-data dominant — claims, production, spreads, housing — because measurable activity is what recessions actually are. The SLOOS lending-standards survey is the exception: it's soft data that predicts hard outcomes (loan volume), making it a leading rather than lagging soft series.
+      > **Fact:** In early 2023 the 'vibecession' gap — sentiment near recession lows, hard data near expansion norms — was the widest ever recorded between what people said and what the economy did.
+  nyfed_prob:
+    title: "NY Fed recession probability"
+    desc: "The Federal Reserve's own 12-month recession model — a pure yield-curve forecast."
+    body: |
+      The New York Fed publishes a monthly recession-probability estimate derived entirely from the 10Y–3M Treasury spread, using a probit model estimated on decades of cycle history. When the curve inverts deeply, the probability soars — it peaked above 70% in 2023–24, the highest reading since the model was created.
+      ## One signal, done well
+      The model's strength is its simplicity: one input, long history, fully transparent methodology. Its weakness is the same: it carries the yield curve's blind spots — the term-premium distortions, the 2023–24 false alarm — with no diversification across the credit, housing, and labor channels that also precede recessions.
+      ## In the panel
+      We include it as a reference signal rather than building on it — it anchors the 'what does a single-signal model say' answer and keeps the composite honest: when our panel agrees with the curve probability, confidence is higher; when they diverge, that's information too.
+      > **Fact:** The model's 2023 peak exceeded every reading since the 1980s — yet no recession followed. It became the clearest recent demonstration that even the Fed's own probability model carries meaningful false-positive risk.
 
 state_change:
   cleared: "cleared"

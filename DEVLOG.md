@@ -2,6 +2,29 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (glossary wiki: 8 → 43 terms, clustered + cross-linked)
+
+Glossary grew into a topical mini-wiki — all in-niche (recession
+mechanics, the tracked indicators, data methodology), no generic
+investing terms that would dilute topical authority:
+
+- Index regrouped into 8 clusters: how the site works, recession
+  anatomy, yield curve & rates, credit, labor, real activity,
+  inflation, methodology.
+- 33 new terms written (en+ru): business cycle, soft landing, double
+  dip, growth recession, output gap, re-steepening, bear/bull
+  steepening, treasury yields, term premium, fed funds, QE/QT,
+  high yield, credit crunch, SLOOS, liquidity, claims, payrolls,
+  U-3/U-6, JOLTS/quits, temp help, industrial production, housing
+  permits, durable goods, ISM/PMI, GDP vs GDI, CPI vs PCE, core
+  inflation, breakevens, stagflation, seasonal adjustment,
+  nowcasting, base rate/false positives, hard vs soft data,
+  NY Fed probability.
+- Cross-links both ways: term pages link "Tracked on this site"
+  (/signals/), "Episodes where it mattered", and "See also" terms;
+  signal pages link back to their glossary entry.
+- DefinedTerm / DefinedTermSet JSON-LD on term pages and the index.
+
 ## 2026-10-05 (site-wide bot CTA + signals index layout)
 
 - Shared `botCta()` banner rendered at the foot of every site page —
