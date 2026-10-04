@@ -2,6 +2,16 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (full timezone coverage)
+
+The TZ picker preset grid was expanded to cover every inhabited US
+offset (UTC−10…−4) plus common world zones (UTC…+11 incl. +5:30/+5:45
+territory is reachable via command), and a `/tz` command was added for
+arbitrary offsets the grid doesn't show: `/tz +5:30`, `/tz -8`,
+`/tz utc` (bare numbers read as east). The settings submenu now also
+replies with the hint plus current offset so the command is
+discoverable. `parseTzArg` validates the world range −12…+14 h.
+
 ## 2026-10-04 (implementation pass 19: user timezone)
 
 Time preferences moved off UTC to the user's own timezone (migration

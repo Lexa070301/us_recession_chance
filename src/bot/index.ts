@@ -14,6 +14,7 @@ import {
   cmdPlan,
   cmdQuiet,
   cmdSettings,
+  cmdTz,
   cmdSignals,
   cmdStart,
   cmdStatus,
@@ -57,6 +58,7 @@ export function createBot(): Bot {
   bot.command("dashboard", cmdDashboard);
   bot.command("digest", cmdDigest);
   bot.command("quiet", cmdQuiet);
+  bot.command("tz", cmdTz);
   bot.command("plan", cmdPlan);
   bot.command("terms", cmdTerms);
   bot.command("paysupport", cmdPaySupport);

@@ -15,7 +15,7 @@ import {
 } from "../src/data/repositories/users.js";
 import { routeBucketAlert, routeCompositeAlerts, routeEvent } from "../src/publish/publisher.js";
 import { localMinutes } from "../src/jobs/digest.js";
-import { parseQuietArg } from "../src/bot/handlers.js";
+import { parseQuietArg, parseTzArg } from "../src/bot/handlers.js";
 import type { CompositeResult } from "../src/signals/score.js";
 
 const ev = (key: string, from: SignalState, to: SignalState): SignalEventRow => {
@@ -97,6 +97,21 @@ describe("parseQuietArg", () => {
     expect(parseQuietArg("garbage")).toBeNull();
     expect(parseQuietArg("0-0")).toBeNull();
     expect(parseQuietArg("25-8")).toBeNull();
+  });
+});
+
+describe("parseTzArg", () => {
+  it("parses signed, utc-prefixed and bare offsets within −12…+14", () => {
+    expect(parseTzArg("+5:30")).toBe(330);
+    expect(parseTzArg("-8")).toBe(-480);
+    expect(parseTzArg("utc+2")).toBe(120);
+    expect(parseTzArg("UTC-3")).toBe(-180);
+    expect(parseTzArg("utc")).toBe(0);
+    expect(parseTzArg("3")).toBe(180); // bare = east
+    expect(parseTzArg("+14")).toBe(840);
+    expect(parseTzArg("garbage")).toBeNull();
+    expect(parseTzArg("+15")).toBeNull();
+    expect(parseTzArg("+5:75")).toBeNull();
   });
 });
 

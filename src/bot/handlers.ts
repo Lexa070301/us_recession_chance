@@ -55,6 +55,19 @@ function utcHhmmToLocal(hhmmUtc: string, tzOffsetMin: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+/** "+5:30" | "-8" | "utc" | "utc+2" → minutes east of UTC; null on bad input.
+ *  Bare numbers read as UTC+h (east). Valid world range: −12…+14. */
+export function parseTzArg(arg: string): number | null {
+  if (/^utc$/i.test(arg.trim())) return 0;
+  const m = /^(?:utc)?\s*([+-])?\s*(\d{1,2})(?::([0-5]\d))?$/i.exec(arg.trim());
+  if (!m) return null;
+  const h = Number(m[2]);
+  const mm = m[3] ? Number(m[3]) : 0;
+  if (h > 14 || (h === 14 && mm > 0)) return null;
+  const sign = m[1] === "-" ? -1 : 1;
+  return sign * (h * 60 + mm);
+}
+
 /** "22-8" | "22:30-07:15" → fractional-hour window; null on bad input. */
 export function parseQuietArg(arg: string): { from: number; to: number } | null {
   const m = /^(\d{1,2})(?::([0-5]\d))?\s*[-–—]\s*(\d{1,2})(?::([0-5]\d))?$/.exec(arg.trim());
@@ -223,6 +236,24 @@ export async function cmdQuiet(ctx: Context): Promise<void> {
   );
 }
 
+/** /tz +5:30 — free-form timezone for offsets the picker doesn't cover. */
+export async function cmdTz(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const userId = ctx.from!.id;
+  if (getUser(userId)?.plan !== "plus") {
+    await ctx.reply(t(loc, "bot.settings_plus_only"));
+    return;
+  }
+  const arg = String(ctx.match ?? "").trim();
+  const off = parseTzArg(arg);
+  if (!arg || off === null) {
+    await ctx.reply(t(loc, "bot.tz_invalid"));
+    return;
+  }
+  savePrefs(userId, { tz_offset: off });
+  await ctx.reply(t(loc, "bot.tz_set", { tz: formatTz(off) }));
+}
+
 // ------------------------------------------------------------------
 // Keyboards
 // ------------------------------------------------------------------
@@ -280,8 +311,13 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
   return kb;
 }
 
-/** Timezone picker — common UTC offsets in minutes, 4 per row + back. */
-const TZ_PRESETS = [-480, -300, -180, 0, 60, 120, 180, 240, 330, 420, 540, 600];
+/** Timezone picker — all inhabited US offsets + common world zones
+ *  (minutes east of UTC), 4 per row + back. Rare offsets: /tz command. */
+const TZ_PRESETS = [
+  -600, -540, -480, -420, -360, -300, -240, -180, // Hawaii → Atlantic
+  0, 60, 120, 180, 240, // UTC → UTC+4
+  330, 420, 480, 540, 600, 660, // +5:30 → +11
+];
 
 function tzKeyboard(ctx: Context): InlineKeyboard {
   const kb = new InlineKeyboard();
@@ -425,6 +461,9 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
     }
     await ctx.answerCallbackQuery();
     await ctx.editMessageReplyMarkup({ reply_markup: tzKeyboard(ctx) });
+    await ctx.reply(
+      t(loc, "bot.tz_hint", { tz: formatTz(getPrefs(userId).tz_offset) }),
+    );
     return;
   }
 
