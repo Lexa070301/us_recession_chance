@@ -78,16 +78,25 @@ function cacheSet(key: string, text: string): void {
   cache.set(key, { text, at: Date.now() });
 }
 
-export function renderEpisodes(
-  args: EpisodesArgs,
-  locale: string,
-  conn?: Database.Database,
-): string {
-  const db = conn ?? getDb();
-  const cacheKey = `${args.from}-${args.to}|${args.asof ? "asof" : "latest"}|${locale}`;
-  const hit = cache.get(cacheKey);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.text;
+export interface SignalWindowHit {
+  key: string;
+  peak: SignalState;
+  episodes: Episode[];
+}
+export interface EpisodeWindow {
+  recessions: { start: string; end: string; caught: number }[];
+  /** Signals with ≥1 episode overlapping the window, peak-severity desc. */
+  hits: SignalWindowHit[];
+  forecastCount: number;
+}
 
+/** Structured episode data for a year window — shared by the /episodes
+ *  command and the static site pages (SEO). `asof` replays on vintages. */
+export function episodeWindow(
+  args: EpisodesArgs,
+  conn?: Database.Database,
+): EpisodeWindow {
+  const db = conn ?? getDb();
   const cfg = getConfig();
   const fromMonth = `${args.from}-01`;
   const toMonth = `${args.to}-12`;
@@ -102,30 +111,49 @@ export function renderEpisodes(
   // Replay each signal ONCE — the NBER catch loop below reuses these
   // episodes; re-replaying per recession was O(recessions × signals) (H3).
   const episodesBySignal = new Map<string, Episode[]>();
-  interface SignalHit {
-    key: string;
-    peak: SignalState;
-    lines: string[];
-    episodes: number;
-  }
-  const hits: SignalHit[] = [];
+  const hits: SignalWindowHit[] = [];
   for (const sig of cfg.signals) {
     const eps = detectEpisodes(source.replay(sig));
     episodesBySignal.set(sig.key, eps);
     const inWindow = eps.filter((ep) => overlaps(ep, fromMonth, toMonth));
     if (!inWindow.length) continue;
-    const name = t(locale, `signal.${sig.key}.name`);
     hits.push({
       key: sig.key,
-      episodes: inWindow.length,
+      episodes: inWindow,
       peak: inWindow.reduce((a, b) => (SEVERITY_ORDER[b.peak] > SEVERITY_ORDER[a.peak] ? b : a)).peak,
-      lines: inWindow.map(
-        (ep) =>
-          `  · ${name}: ${ep.start.slice(0, 7)} → ${ep.end ? ep.end.slice(0, 7) : "…"} (${t(locale, `severity.${ep.peak}`)})`,
-      ),
     });
   }
   hits.sort((a, b) => SEVERITY_ORDER[b.peak] - SEVERITY_ORDER[a.peak]);
+
+  const forecastCount = cfg.signals.filter((s) => s.block !== "nowcast" && s.weight > 0).length;
+  return {
+    forecastCount,
+    hits,
+    recessions: recessions.map((r) => ({
+      start: r.start,
+      end: r.end,
+      caught: cfg.signals.filter((sig) => {
+        if (sig.block === "nowcast" || sig.weight <= 0) return false;
+        return (episodesBySignal.get(sig.key) ?? []).some(
+          (ep) =>
+            monthIndex(ep.start.slice(0, 7)) <= monthIndex(r.start) &&
+            monthIndex((ep.end ?? ep.start).slice(0, 7)) >= monthIndex(r.start) - 24,
+        );
+      }).length,
+    })),
+  };
+}
+
+export function renderEpisodes(
+  args: EpisodesArgs,
+  locale: string,
+  conn?: Database.Database,
+): string {
+  const cacheKey = `${args.from}-${args.to}|${args.asof ? "asof" : "latest"}|${locale}`;
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.text;
+
+  const win = episodeWindow(args, conn);
 
   const out: string[] = [
     t(locale, "episodes.title", {
@@ -134,33 +162,28 @@ export function renderEpisodes(
     }),
   ];
 
-  // NBER record for the window + how many signals caught each recession
-  const forecastCount = cfg.signals.filter((s) => s.block !== "nowcast" && s.weight > 0).length;
-  for (const r of recessions) {
-    const caught = cfg.signals.filter((sig) => {
-      if (sig.block === "nowcast" || sig.weight <= 0) return false;
-      return (episodesBySignal.get(sig.key) ?? []).some(
-        (ep) =>
-          monthIndex(ep.start.slice(0, 7)) <= monthIndex(r.start) &&
-          monthIndex((ep.end ?? ep.start).slice(0, 7)) >= monthIndex(r.start) - 24,
-      );
-    }).length;
+  for (const r of win.recessions) {
     out.push(
       "",
       t(locale, "episodes.nber", {
         period: `${r.start}–${r.end}`,
-        caught,
-        total: forecastCount,
+        caught: r.caught,
+        total: win.forecastCount,
       }),
     );
   }
-  if (!recessions.length) {
+  if (!win.recessions.length) {
     out.push("", t(locale, "episodes.nber_none"));
   }
 
-  if (hits.length) {
+  if (win.hits.length) {
     out.push("", t(locale, "episodes.signal_header"));
-    const lines = hits.flatMap((h) => h.lines);
+    const lines = win.hits.flatMap((h) =>
+      h.episodes.map(
+        (ep) =>
+          `  · ${t(locale, `signal.${h.key}.name`)}: ${ep.start.slice(0, 7)} → ${ep.end ? ep.end.slice(0, 7) : "…"} (${t(locale, `severity.${ep.peak}`)})`,
+      ),
+    );
     const MAX = 30;
     out.push(...lines.slice(0, MAX));
     if (lines.length > MAX) out.push(t(locale, "episodes.more", { n: lines.length - MAX }));

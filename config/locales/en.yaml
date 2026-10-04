@@ -42,6 +42,12 @@ site:
     Episode search (/episodes)
   method_link: "Methodology"
   audit_link: "Self-audit log"
+  episodes_link: "Episodes"
+  intro: "An open monitor of US recession risk: leading FRED indicators are scored against historical thresholds and combined into a composite 12-month outlook — published daily, fully reproducible, self-audited weekly."
+  episodes_title: "Signal episodes"
+  episodes_intro: "Historical replay of every indicator: which signals fired around each recession, their peak severity, and how many caught the NBER turn."
+  episode_title: "Recession episode {{range}}"
+  episode_desc: "Which leading recession signals fired in {{range}} — episode windows, peak severities, NBER catch record."
   back: "← back"
   disclaimer: "Informational data only — not investment advice. Historical frequencies do not guarantee future results."
   method_title: "Methodology"

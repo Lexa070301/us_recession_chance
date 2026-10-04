@@ -13,6 +13,8 @@ export interface SitePageOpts {
   fallback?: string;
   /** Root-relative path of the page, e.g. "/" or "/method/" — canonical link. */
   pagePath?: string;
+  /** Extra <head> markup (e.g. search-console verification on the homepage). */
+  extraHead?: string;
 }
 
 const BASE_CSS = `
@@ -64,6 +66,7 @@ const BASE_CSS = `
   .lang { display: inline-flex; gap: 8px; }
   .lang a.on { color: #e5e7eb; }
   .lang a.off { color: #475569; }
+  .intro { color: #64748b; font-size: 14px; line-height: 1.6; margin-top: 28px; }
 `;
 
 const STATE_DOT: Record<string, string> = {
@@ -94,15 +97,26 @@ export function pageShell(
       `\n<link rel="alternate" hreflang="x-default" href="${esc(hrefFor(fallback))}">`
     : "";
   const desc = opts.description ? `<meta name="description" content="${esc(opts.description)}">` : "";
+  const OG_LOCALE: Record<string, string> = { en: "en_US", ru: "ru_RU" };
+  const ogLocale = OG_LOCALE[locale] ?? "en_US";
+  const ogAlternates = locales
+    .filter((l) => l !== locale)
+    .map((l) => `<meta property="og:locale:alternate" content="${OG_LOCALE[l] ?? l}">`)
+    .join("\n");
   const og = siteUrl
     ? `<meta property="og:type" content="website">
 <meta property="og:title" content="${esc(title)}">
 ${opts.description ? `<meta property="og:description" content="${esc(opts.description)}">` : ""}
 <meta property="og:url" content="${esc(pageUrl)}">
+<meta property="og:locale" content="${ogLocale}">
+${ogAlternates}
 <meta property="og:image" content="${esc(siteUrl)}/card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">`
+    : "";
+  const favicon = siteUrl
+    ? `<link rel="icon" type="image/svg+xml" href="${esc(siteUrl)}/favicon.svg">`
     : "";
   const jsonLd = siteUrl
     ? `<script type="application/ld+json">${JSON.stringify({
@@ -148,6 +162,7 @@ ${desc}
 ${canonical}
 ${hreflang}
 ${og}
+${favicon}
 ${opts.feedHref ? `<link rel="alternate" type="application/atom+xml" href="${esc(opts.feedHref)}" title="${esc(title)} (${esc(locale)})">` : ""}
 ${jsonLd}
 ${opts.extraHead ?? ""}
@@ -228,6 +243,7 @@ export function indexHtml(
   <div class="trend-label">${esc(L.trend_90d)}</div>
   ${d.active.length ? `<div class="chips">${d.active.map(chip).join("")}</div>` : ""}
   <div class="nowcast">${esc(L.nowcast)}: ${nowcastLine}</div>
+  <p class="intro">${esc(L.intro)}</p>
 
   <h2>${esc(L.signals_title)}</h2>
   <table class="sig-table">
@@ -249,6 +265,7 @@ export function indexHtml(
     <span>${esc(L.updated)}: ${esc(updated)} UTC</span>
     <a href="method/">${esc(L.method_link)}</a>
     <a href="audit/">${esc(L.audit_link)}</a>
+    <a href="episodes/">${esc(L.episodes_link)}</a>
     ${opts.bot ? `<a href="${botLink}">@${esc(opts.bot)}</a>` : ""}
     ${opts.feedHref ? `<a href="${esc(opts.feedHref)}">RSS</a>` : ""}
   </footer>

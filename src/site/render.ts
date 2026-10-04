@@ -8,7 +8,8 @@ import { buildDashboardData } from "./dataJson.js";
 import { indexHtml, type SitePageOpts } from "./html.js";
 import { atomFeed } from "./feed.js";
 import { methodHtml } from "./method.js";
-import { auditPages } from "./audit.js";
+import { auditPages, auditWeekLocales } from "./audit.js";
+import { episodePages } from "./episodes.js";
 
 /**
  * GitHub Pages site (PLAN2 §2): static dashboard + Atom feeds + data.json
@@ -40,30 +41,62 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
     written.push(rel);
   };
 
+  // Search-console verification — only needs the homepage meta tag.
+  const gsc = process.env.GOOGLE_SITE_VERIFICATION
+    ? `<meta name="google-site-verification" content="${process.env.GOOGLE_SITE_VERIFICATION}">`
+    : "";
+  // Week pages may exist in one locale only — hreflang must not point at 404s.
+  const weekLocales = auditWeekLocales(locales, db);
+
   for (const loc of locales) {
     const data = buildDashboardData(loc, db);
     // Feed link must resolve from BOTH root pages (feed-*.xml next to
     // index.html) and locale subpages (/ru/index.html → ../feed-ru.xml).
     const feedName = `feed-${loc}.xml`;
     const feedHref = loc === fallback ? feedName : `../${feedName}`;
-    const html = indexHtml(data, loc, { bot, feedHref, siteUrl, locales, fallback });
+    const indexOpts: SitePageOpts = {
+      bot, feedHref, siteUrl, locales, fallback, extraHead: gsc,
+    };
+    const html = indexHtml(data, loc, indexOpts);
     write(`data.${loc}.json`, JSON.stringify(data, null, 2));
     write(feedName, atomFeed(loc, siteUrl, db));
     const pageOpts: SitePageOpts = { bot, siteUrl, locales, fallback };
+    const base = loc === fallback ? "" : `${loc}/`;
+    write(`${base}index.html`, html);
+    write(`${base}method/index.html`, methodHtml(loc, pageOpts));
+    for (const [rel, page] of auditPages(loc, `${base}audit`, pageOpts, db, weekLocales)) {
+      write(rel, page);
+    }
+    for (const [rel, page] of episodePages(loc, `${base}episodes`, pageOpts, db)) {
+      write(rel, page);
+    }
     if (loc === fallback) {
-      write("index.html", html);
       write("data.json", JSON.stringify(data, null, 2));
       write("feed.xml", atomFeed(loc, siteUrl, db));
-      write("method/index.html", methodHtml(loc, pageOpts));
-      for (const [rel, page] of auditPages(loc, "audit", pageOpts, db)) write(rel, page);
-    } else {
-      write(`${loc}/index.html`, html);
-      write(`${loc}/method/index.html`, methodHtml(loc, pageOpts));
-      for (const [rel, page] of auditPages(loc, `${loc}/audit`, pageOpts, db)) write(rel, page);
     }
   }
   // artifact-deploy skips Jekyll anyway; .nojekyll keeps branch-deploys safe.
   write(".nojekyll", "");
+
+  // robots.txt — honored only at host root (i.e. a custom domain or the
+  // user-pages repo); still emitted so a future CNAME gets it for free.
+  if (siteUrl) {
+    write(
+      "robots.txt",
+      `User-agent: *\nAllow: /\nDisallow: /app/\n\nSitemap: ${siteUrl}/sitemap.xml\n`,
+    );
+    // Sitemap: every rendered HTML page, minus the trailing index.html.
+    const today = new Date().toISOString().slice(0, 10);
+    const urls = written
+      .filter((rel) => rel.endsWith("index.html"))
+      .map((rel) => `${siteUrl}/${rel.replace(/index\.html$/, "")}`)
+      .map((loc) => `  <url><loc>${loc}</loc><lastmod>${today}</lastmod></url>`)
+      .join("\n");
+    write(
+      "sitemap.xml",
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`,
+    );
+  }
 
   // Mini App (PLAN2 §14): versioned sources in web/app/ → site/app/.
   const appSrc = join(dirname(fileURLToPath(import.meta.url)), "../../web/app");
@@ -71,6 +104,11 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
   if (existsSync(appSrc)) {
     cpSync(appSrc, appDest, { recursive: true });
     written.push("app/index.html", "app/app.js", "app/styles.css");
+  }
+  const faviconSrc = join(dirname(fileURLToPath(import.meta.url)), "../../web/favicon.svg");
+  if (existsSync(faviconSrc)) {
+    cpSync(faviconSrc, join(outDir, "favicon.svg"));
+    written.push("favicon.svg");
   }
   return written;
 }

@@ -2,6 +2,26 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (SEO pass on the Pages site)
+
+Discoverability and crawl-surface work on `npm run site`:
+
+- **sitemap.xml** — generated from the rendered file list with lastmod;
+  **robots.txt** emitted too (inert on the project subpath — crawlers
+  only honor host-root robots — but correct under a future CNAME).
+- **/episodes/ static pages** — index + one page per preset window
+  (1980–82, 1990–91, 2001, 2008–09, 2020, 2023–24) in both locales,
+  rendering the same replay data as the bot command via the new shared
+  `episodeWindow()` collector in bot/episodes.ts. Long-tail SEO surface.
+- **Meta fixes** — og:locale / og:locale:alternate; favicon.svg +
+  <link rel="icon">; <meta name="robots" content="noindex"> on the Mini
+  App shell; homepage gains a short intro paragraph for snippet text.
+- **hreflang fix** — audit-week pages now advertise alternates only for
+  locales where the week actually exists (auditWeekLocales()), so
+  single-locale weeks no longer link to a 404.
+- **GOOGLE_SITE_VERIFICATION** — new repo var → <meta> on the homepage;
+  wire-up documented in .env.example and monitor.yml.
+
 ## 2026-10-05 (full timezone coverage)
 
 The TZ picker preset grid was expanded to cover every inhabited US

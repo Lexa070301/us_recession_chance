@@ -125,6 +125,9 @@ jobs:
           DATABASE_PATH: ./data/recession.db
           BOT_USERNAME: ${{ vars.BOT_USERNAME }}
           SITE_URL: ${{ vars.SITE_URL }}
+          # Optional: Google Search Console verification token — emitted as
+          # a <meta> on the homepage when the var is set.
+          GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
         run: npm run site
 
       - name: Upload Pages artifact

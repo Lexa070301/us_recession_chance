@@ -56,6 +56,23 @@ export function auditIndexHtml(locale: string, opts: SitePageOpts, conn?: Databa
 }
 
 /** Per-week audit page — full post text, escaped verbatim. */
+/** Week slug → locales that actually have that audit page. Lets hreflang
+ * point only at existing alternates (a week posted in one locale would
+ * otherwise emit an alternate link to a 404). */
+export function auditWeekLocales(
+  locales: string[],
+  conn?: Database.Database,
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const loc of locales) {
+    for (const r of auditRows(loc, conn)) {
+      const s = slug(r.digest_key);
+      map.set(s, [...(map.get(s) ?? []), loc]);
+    }
+  }
+  return map;
+}
+
 export function auditWeekHtml(
   locale: string,
   row: AuditRow,
@@ -75,17 +92,23 @@ export function auditWeekHtml(
   });
 }
 
-/** All audit pages to write: index + one per week. Returns [relpath, html]. */
+/** All audit pages to write: index + one per week. Returns [relpath, html].
+ * `weekLocales` overrides per-week hreflang alternates (see auditWeekLocales). */
 export function auditPages(
   locale: string,
   base: string,
   opts: SitePageOpts,
   conn?: Database.Database,
+  weekLocales?: Map<string, string[]>,
 ): [string, string][] {
   const rows = auditRows(locale, conn);
   const pages: [string, string][] = [[`${base}/index.html`, auditIndexHtml(locale, opts, conn)]];
   for (const r of rows) {
-    pages.push([`${base}/${slug(r.digest_key)}/index.html`, auditWeekHtml(locale, r, opts)]);
+    const s = slug(r.digest_key);
+    const weekOpts = weekLocales?.get(s)
+      ? { ...opts, locales: weekLocales.get(s) }
+      : opts;
+    pages.push([`${base}/${s}/index.html`, auditWeekHtml(locale, r, weekOpts)]);
   }
   return pages;
 }

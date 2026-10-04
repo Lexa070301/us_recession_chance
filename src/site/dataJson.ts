@@ -80,6 +80,9 @@ export const dashboardDataSchema = z.object({
     cta_items: z.string(),
     method_link: z.string(),
     audit_link: z.string(),
+    episodes_link: z.string(),
+    /** Short "what is this" paragraph under the hero — SEO context text. */
+    intro: z.string(),
     back: z.string(),
   }),
 });
@@ -187,6 +190,8 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
       cta_items: t(locale, "site.cta_items"),
       method_link: t(locale, "site.method_link"),
       audit_link: t(locale, "site.audit_link"),
+      episodes_link: t(locale, "site.episodes_link"),
+      intro: t(locale, "site.intro"),
       back: t(locale, "site.back"),
     },
   });
