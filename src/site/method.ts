@@ -7,7 +7,7 @@ const FRED_SERIES = "https://fred.stlouisfed.org/series/";
 
 /** Compact JSON view of an evaluator — honest rule text; long key lists are
  * summarized (sahm_states carries 51 state series). */
-function evalJson(ev: EvaluatorDef): string {
+export function evalJson(ev: EvaluatorDef): string {
   const out: Record<string, unknown> = { type: ev.type };
   if ("params" in ev && ev.params) {
     const p = { ...(ev.params as Record<string, unknown>) };

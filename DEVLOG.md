@@ -2,6 +2,32 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (content SEO: site grows to ~110 pages)
+
+Editorial content layer added on top of the data pages — every page
+carries a purpose-written copy block in both locales (no gated data:
+
+stats like per-signal hit-rates stay in the bot's /analytics):
+
+- **/signals/** — index + one page per signal: live state/value, the
+  exact evaluator rule, FRED source link, and a written paragraph on
+  what the indicator measures and where it leads/lags.
+- **/glossary/** — 8 explainer articles (yield curve, Sahm rule, NBER
+  dating, credit spreads, NFCI, leading-vs-coincident, revisions,
+  composite score) rendered through the new markdown-lite
+  renderArticleBody (## heads, > fact callouts, escaped by default).
+- **/faq/** — 8 Q&A; the same locale strings feed both the visible
+  list and a FAQPage JSON-LD block.
+- **/history/** — full composite-snapshot record, sparkline + table;
+  grows as snapshots accumulate.
+- **/about/** — project/independence/data-provenance copy.
+- **/episodes/ expanded to all NBER recessions** in data range
+  (1969–70 … 2020) + the 2023–24 inversion scare — each with a written
+  editorial piece (structure, facts, "signal record" section, fact
+  callouts). Legacy slugs 1980-1982 and 2008-2009 keep meta-refresh
+  stubs to the new canonical pages.
+- Footer nav gains signals/episodes/history/glossary/faq/audit/about.
+
 ## 2026-10-05 (SEO pass on the Pages site)
 
 Discoverability and crawl-surface work on `npm run site`:

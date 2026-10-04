@@ -10,6 +10,11 @@ import { atomFeed } from "./feed.js";
 import { methodHtml } from "./method.js";
 import { auditPages, auditWeekLocales } from "./audit.js";
 import { episodePages } from "./episodes.js";
+import { signalPages } from "./signals.js";
+import { glossaryPages } from "./glossary.js";
+import { faqHtml } from "./faq.js";
+import { historyHtml } from "./history.js";
+import { aboutHtml } from "./about.js";
 
 /**
  * GitHub Pages site (PLAN2 §2): static dashboard + Atom feeds + data.json
@@ -64,10 +69,19 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
     const base = loc === fallback ? "" : `${loc}/`;
     write(`${base}index.html`, html);
     write(`${base}method/index.html`, methodHtml(loc, pageOpts));
+    write(`${base}faq/index.html`, faqHtml(loc, pageOpts));
+    write(`${base}history/index.html`, historyHtml(loc, pageOpts, db));
+    write(`${base}about/index.html`, aboutHtml(loc, pageOpts));
     for (const [rel, page] of auditPages(loc, `${base}audit`, pageOpts, db, weekLocales)) {
       write(rel, page);
     }
     for (const [rel, page] of episodePages(loc, `${base}episodes`, pageOpts, db)) {
+      write(rel, page);
+    }
+    for (const [rel, page] of signalPages(loc, `${base}signals`, pageOpts, db)) {
+      write(rel, page);
+    }
+    for (const [rel, page] of glossaryPages(loc, `${base}glossary`, pageOpts)) {
       write(rel, page);
     }
     if (loc === fallback) {

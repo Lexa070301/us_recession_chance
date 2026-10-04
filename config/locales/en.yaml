@@ -43,11 +43,182 @@ site:
   method_link: "Methodology"
   audit_link: "Self-audit log"
   episodes_link: "Episodes"
+  signals_link: "Signals"
+  history_link: "History"
+  glossary_link: "Glossary"
+  faq_link: "FAQ"
+  about_link: "About"
   intro: "An open monitor of US recession risk: leading FRED indicators are scored against historical thresholds and combined into a composite 12-month outlook — published daily, fully reproducible, self-audited weekly."
   episodes_title: "Signal episodes"
   episodes_intro: "Historical replay of every indicator: which signals fired around each recession, their peak severity, and how many caught the NBER turn."
   episode_title: "Recession episode {{range}}"
   episode_desc: "Which leading recession signals fired in {{range}} — episode windows, peak severities, NBER catch record."
+  signals_intro: "Every indicator in the composite — what it measures, the exact rule that fires it, its current state, and a link to the raw FRED series."
+  signal_source: "Source series on FRED"
+  history_title: "Composite score history"
+  history_desc: "The full public record of the composite recession-risk score — every snapshot since launch, colored by risk band."
+  history_intro: |
+    Every monitor run writes one snapshot of the composite score. This page is the complete public record — the series grows daily and is never retroactively edited.
+    Early days look sparse: the score history only exists from launch onward. Bars are colored by the risk band each snapshot fell into.
+  history_recent: "Recent snapshots"
+  history_empty: "No snapshots yet — history starts with the next monitor run."
+  about_title: "About this project"
+  about_desc: "What US Recession Chance is, where the data comes from, and how it's maintained."
+  about_body: |
+    US Recession Chance is an independent open-source monitor of US recession risk. It watches a fixed panel of leading indicators published by the Federal Reserve system (FRED), scores each against historically meaningful thresholds, and combines them into a composite 12-month outlook that updates daily.
+    ## What it is not
+    It is not a trading system, a forecast sold as certainty, or an official publication of any institution. It is not affiliated with the Federal Reserve, NBER, or any data provider — it consumes their public series and documents its own rules in the open.
+    ## How it's maintained
+    The signal definitions, thresholds, and scoring weights live in public config files in the source repository — every number on this site is reproducible from them. A weekly self-audit is posted to the public log: what the signals said, what changed, and where the model disagreed with itself.
+    ## Data
+    All indicator data comes from FRED (Federal Reserve Bank of St. Louis). Recession dating follows the NBER business-cycle chronology. Historical analysis uses ALFRED vintages — the data as it was originally published, not the revised history — so backtests reflect what was knowable at the time.
+  glossary_title: "Glossary"
+  glossary_intro: "The concepts behind the signals, in plain language."
+  faq_title: "Frequently asked questions"
+  faq_desc: "How the composite score works, where the data comes from, and what the risk bands mean."
+  faq:
+    1:
+      q: "What does the composite score mean?"
+      a: |
+        Each signal is in one of four states: ok, watch, warning, or critical. The score is a weighted sum of active states — watch counts 0.5, warning 1.0, critical 1.5, each multiplied by the signal's own weight. It maps to four risk bands calibrated on 1967–2026 history: low (0–5), elevated (5–9), high (9–13), severe (13+). The band, not the raw number, is the estimate.
+    2:
+      q: "How is this different from the NY Fed recession probability?"
+      a: |
+        The NY Fed model is a probit on a single input — the 10-year/3-month Treasury spread. Elegant, but one-dimensional: it missed or lagged in cycles where the curve stayed honest while credit and labor cracked first. We include that same spread-probit as one signal among twenty, so curve risk is priced in without the whole estimate riding on it.
+    3:
+      q: "How often is the data updated?"
+      a: |
+        The monitor runs daily and also on the release days of weekly and monthly series (claims on Thursdays, NFCI on Wednesdays, payrolls on the first Friday). Signals only change state when their underlying series publishes — a weekly signal cannot fire mid-week on stale data.
+    4:
+      q: "Does a high or severe band mean a recession is certain?"
+      a: |
+        No. These are probabilistic bands, not certainties. Historically, even the severe band has seen recessions fail to materialize within 12 months — and elevated readings have preceded both recessions and soft landings. The bands report what happened after similar configurations in the past, nothing more.
+    5:
+      q: "Is this investment advice?"
+      a: "No. Everything here is informational — public indicators run through public rules. Recession timing is one input among many for financial decisions; this site deliberately makes no portfolio claims."
+    6:
+      q: "Where does the data come from?"
+      a: "All indicators are public FRED series (Federal Reserve Bank of St. Louis) — each signal page links its source series. Recession dating follows the official NBER chronology. Point-in-time analysis uses ALFRED vintages, the unrevised data as originally released."
+    7:
+      q: "What are data revisions and vintages?"
+      a: "Economic series get revised — payrolls, GDP, even unemployment claims are restated months later. A backtest that trains on today's revised history is subtly cheating. We store ALFRED vintages so historical analysis can use the data exactly as it was published on a given date."
+    8:
+      q: "Is the service free?"
+      a: "The public channels, daily digests, this site, and the methodology are free. The Telegram bot's paid tier adds instant alerts (instead of the daily digest), personal score thresholds, per-signal filtering, quiet hours, and on-demand commands like /episodes and /analytics."
+  episode_name:
+    r1969: "Post-Vietnam tightening"
+    r1973: "Oil shock & stagflation"
+    r1980: "Volcker's first blow"
+    r1981: "Volcker's second blow — the double dip"
+    r1990: "Credit crunch & Gulf oil spike"
+    r2001: "Dot-com bust"
+    gfc: "Great Recession"
+    covid: "COVID-19"
+    scare2324: "Inversion scare — the false alarm"
+  article:
+    r1969:
+      title: "The 1969–70 Recession"
+      body: |
+        The recession of 1969–70 was a deliberately engineered slowdown — the first post-war episode where policy openly traded growth for price stability. Through 1968–69 the Federal Reserve tightened aggressively to cool the inflation built up by Vietnam-era deficit spending, while fiscal policy swung from a $5.2B deficit to a ~$10B surplus — an enormous demand withdrawal in a single year.
+        ## How it unfolded
+        Growth stalled in late 1969 and the economy contracted through most of 1970. Unemployment climbed from a 15-year low of 3.4% to about 6%, yet the downturn stayed mild by every aggregate measure — services and consumption held up while goods production and housing took the hit.
+        ## Why it matters for signals
+        It is the cleanest example of an interest-rate-driven recession: the curve tightened well before activity rolled over, rewarding the leading indicators that watch financial conditions rather than labor. The yield curve had already inverted during the 1966 credit crunch — which produced a slowdown but no recession — making the era the canonical lesson that an inversion is a warning, not a verdict.
+        > **Fact:** The 1969–70 downturn lasted 11 months (Dec 1969 – Nov 1970). Inflation barely responded — it fell only marginally — foreshadowing the far harsher medicine the Fed would need in the 1980s.
+    r1973:
+      title: "The 1973–75 Recession"
+      body: |
+        The 1973–75 recession was the deepest US downturn between the 1930s and 2008 — a collision of a demand boom, a supply shock, and the collapse of price controls. Nixon's 1971 wage-price freeze had bottled inflation artificially; when controls loosened in 1973, prices surged just as the OPEC embargo of October 1973 quadrupled oil prices in three months.
+        ## Two stages of decline
+        NBER analysis splits the episode in two. From November 1973 to autumn 1974 the economy shrank moderately — mostly a supply-constraint story, with gasoline queues and materials shortages throttling output. After October 1974 demand itself collapsed: industrial production, employment, and real income all broke down together, and unemployment raced to 9% by May 1975.
+        ## The signal record
+        Housing indicators warned earliest — starts and permits rolled over in 1973, well before the NBER peak. The yield curve had inverted in 1973, and claims accelerated through 1974. Notably, this is the episode that created the word every forecaster fears: stagflation — prices rising even as output fell, breaking the simple Phillips-curve logic.
+        > **Fact:** The S&P 500 lost 48% peak-to-trough (Jan 1973 – Oct 1974), its worst decline since the Great Depression. The recession lasted 16 months — the longest post-war contraction until 2007–09 tied it.
+    r1980:
+      title: "The 1980 Recession"
+      body: |
+        The 1980 recession was Paul Volcker's opening shot against inflation — and it remains one of the strangest on record because part of the damage was self-inflicted by credit controls. In October 1979 the Fed had switched to targeting bank reserves, letting the funds rate float; by April 1980 it stood at 17.6%. On top of that, President Carter invoked the Credit Control Act in March 1980, asking lenders to restrain consumer credit.
+        ## A demand shock on demand
+        Consumers responded faster than anyone expected: credit card spending froze almost overnight. Manufacturing shed 1.1 million jobs in months, autos lost a third of their workforce, and housing froze. Yet the recession lasted just six months — once controls were lifted in July, pent-up demand snapped back so quickly that the recovery barely looks like one on charts.
+        ## Why it matters for signals
+        Financial and credit signals dominated: the curve inverted deeply through 1979, credit conditions tightened on their own before the controls, and housing led the decline by months. Labor signals confirmed late — unemployment peaked at 7.8% in July 1980, essentially at the trough itself, a reminder that the Sahm-style signals timestamp onset, not forecast.
+        > **Fact:** The 1980 downturn is the shortest peacetime recession on the modern NBER list — six months. It is also the only one partly caused by a credit freeze the government requested on purpose.
+    r1981:
+      title: "The 1981–82 Recession"
+      body: |
+        Barely a year after the 1980 recovery began, the economy fell back in — the second leg of the famous double dip, and the most painful disinflation in modern Fed history. Volcker kept the funds rate near 19% and the prime rate above 21% through 1981; nothing in the credit economy could function at those prices for long.
+        ## The price of credibility
+        Manufacturing and construction hollowed out — the Rust Belt label dates from this period — and unemployment rose to 10.8% in late 1982, a post-war record that still stands. The recession ran 16 months, matching 1973–75 as the longest post-war contraction at the time. In return, inflation collapsed from double digits to under 4% within a year of the trough.
+        ## The signal record
+        Nearly every leading indicator warned in sequence: the curve had inverted through 1980–81, permits and starts fell from early 1981, credit spreads widened, and claims built through the year. It is the textbook case of signals stacking — by mid-1981 almost the entire panel was active, which is what a severe-band reading looks like in practice.
+        > **Fact:** Unemployment stayed above 10% for ten consecutive months — a duration of double-digit joblessness the US has not seen since, not even in 2009 (10% for one month) or 2020 (14.7% for one month).
+    r1990:
+      title: "The 1990–91 Recession"
+      body: |
+        The 1990–91 recession combined three shocks that rarely arrive together: a Fed tightening cycle (1988–89), a domestic credit crunch from the Savings & Loan collapse, and an oil spike after Iraq invaded Kuwait in August 1990. GDP contracted only mildly — but the recovery became famous for what didn't happen: jobs didn't come back.
+        ## The credit-crunch recession
+        Hundreds of thrift institutions were failing, commercial real estate was underwater, and regulators had tightened lending standards simultaneously — banks simply stopped lending. When oil jumped from $17 to $36 per barrel in three months, consumer and business confidence, already fragile, broke. Unemployment rose through the recession's end and kept climbing until June 1992.
+        ## The signal record
+        The yield curve never fully inverted before this recession — one of its cleanest historical misses — while credit and housing signals (SLOOS-style tightening, permits declining through 1988–89) caught the deterioration early. It is the canonical argument for a multi-signal panel: the curve blinked, but credit conditions told the truth.
+        > **Fact:** The 'jobless recovery' was coined here: output resumed growth in April 1991 but unemployment peaked 15 months later, in June 1992 — a lag long enough to arguably cost George H.W. Bush re-election.
+    r2001:
+      title: "The 2001 Recession"
+      body: |
+        The 2001 recession was an investment bust, not a consumer one. The Nasdaq peaked in March 2000 and would ultimately lose 78% of its value; the capital-expenditure mania of the late 1990s — fiber, servers, dot-com payrolls — unwound through 2000–01 as profits evaporated. GDP barely fell: the recession showed up in business spending and jobs, not consumer demand.
+        ## An interrupted downturn
+        The Fed cut rates from 6.5% to 1.75% within the year, and the economy was stabilizing when September 11 hit — freezing travel, insurance, and confidence for a quarter and extending the contraction to 8 months. Corporate scandals (Enron in late 2001, WorldCom in 2002) poisoned equity sentiment well past the official trough.
+        ## The signal record
+        Inversion warned earliest — the curve was inverted through most of 2000. Equity-linked stress arrived before labor did: durable orders and temp help declined through 2000, while claims and the Sahm rule confirmed around the official March 2001 peak. Another jobless recovery followed — unemployment did not peak until June 2003, 19 months after the recession ended.
+        > **Fact:** Measured by GDP decline this was the mildest post-war recession — real output never fell in two consecutive quarters. Measured by payrolls, 2.7 million jobs vanished; the labor market's pain far exceeded what output data suggested.
+    gfc:
+      title: "The Great Recession (2007–09)"
+      body: |
+        The 2007–09 recession was the deepest US downturn since the Great Depression: 18 months long, a housing bust metastasizing into a global banking crisis. Home prices had peaked in 2006, subprime losses were surfacing through 2007, and the NBER peak — December 2007 — predates the drama most people remember.
+        ## Three acts
+        Act one was a slow squeeze: housing indicators deteriorated through 2006–07 while equities kept rising. Act two was the financial heart attack — Bear Stearns in March 2008, then Lehman's collapse on September 15, 2008, which turned a housing recession into a global panic; credit markets froze within days. Act three was the real-economy cascade: world trade fell off a cliff, payrolls shed 700,000+ jobs per month in early 2009, and unemployment doubled to 10%.
+        ## The signal record
+        This is the panel's strongest historical performance: housing permits and starts warned from mid-2006 — roughly 18 months before the peak — credit conditions tightened through 2007, and the NFCI reached critical levels in 2008 before Lehman. The yield curve had inverted in 2006–07. Almost every forecast signal was active by the official start; the composite-style reading would have been in the severe band.
+        > **Fact:** The Fed's policy response invented the modern playbook — rates to zero for the first time ever (Dec 2008), plus quantitative easing. The expansion that followed lasted 128 months, the longest in US history, until COVID ended it.
+    covid:
+      title: "The COVID-19 Recession (2020)"
+      body: |
+        The COVID recession holds two records at once: the shortest recession in the NBER chronology — just two months, February to April 2020 — and the sharpest single-month deterioration ever recorded. Unemployment jumped from a 50-year low of 3.5% to 14.7% in eight weeks; Q2 GDP fell at an annualized rate near 30%.
+        ## A recession by decree
+        Every prior recession emerged from economic imbalances; this one was mandated by public-health shutdowns. That made traditional leading indicators nearly useless — no yield curve, spread, or housing series could foresee a pandemic — and elevated the nowcast block: the Sahm rule triggered in April 2020 in real time, faster than any GDP-based confirmation could have.
+        ## The signal record
+        Claims data told the story fastest: initial claims printed 6.6 million in a single week in late March — ten times the previous record — making this the episode where high-frequency labor data earned its keep. Financial stress spiked and was suppressed within weeks by the largest monetary-fiscal response in history, which is also why the recovery was the fastest on record.
+        > **Fact:** The NBER committee declared the recession's start in June 2020 but dated its trough as April — meaning the economy was already recovering before the recession was officially announced. Signal latency matters more than ever in fast cycles.
+    scare2324:
+      title: "The 2023–24 Inversion Scare"
+      body: |
+        From July 2022 the 2-year/10-year Treasury curve was continuously inverted — eventually passing 624 days to become the longest inversion on record, exceeding the 1978 run. The 10Y–3M probit model implied recession odds near 77% by May 2023. Every recession playbook said the downturn was due in 2023. It never came.
+        ## Why the signal failed
+        The inversion's mechanism — inverted curves squeeze bank lending margins, choking credit — was blunted by a deposit glut: banks were paying near-zero on deposits, so margins stayed healthy and credit kept flowing. Meanwhile fiscal stimulus, locked-in low mortgages, and a labor supply shock kept demand resilient. The curve measured rate expectations accurately; it was the transmission channel that broke.
+        ## What it teaches
+        A single-signal monitor would have flashed red for two years straight and been wrong the whole time — the strongest possible argument for a composite panel. Credit spreads stayed calm, NFCI never sustained stress, and labor demand cooled without collapsing. The episode is included here deliberately: a monitor that only publishes its hits is marketing, not methodology.
+        > **Fact:** The Sahm rule did trigger in August 2024 — its first false-positive-style firing — driven by labor-force growth rather than layoffs. Even the 'flawless' signals miss occasionally; that is why the composite asks for corroboration instead of conviction.
+  signal_page:
+    yield_curve_inversion: "The 10-year minus 3-month Treasury spread is the single most-studied recession predictor: short rates above long rates mean the market expects cuts ahead — historically because growth is weakening. It has preceded every US recession since the late 1960s, with a typical lead of 6–18 months, though it flashed false alarms in 1966–67 and 2023–24."
+    curve_10y2y_inversion: "The 10-year/2-year pair is the market's most-watched spread and usually inverts later than the 10Y–3M. It serves here as corroboration rather than a primary trigger — two independent curve measures agreeing carries more weight than either alone."
+    yield_curve_resteepening: "The dangerous moment historically is not the inversion itself but the rapid re-steepening afterwards — the curve un-inverts because the Fed starts cutting as the economy cracks. In 1990, 2001, 2007 and 2020 the re-steepening clustered around recession onset, making it a short-lead confirmation signal."
+    nyfed_recession_prob: "The New York Fed's published probit model converts the 10Y–3M spread directly into a 12-month recession probability — the same spread we track, turned into a number. It is included as a signal in its own right and doubles as the basis for this site's model line."
+    nfci_tightening: "The Chicago Fed's NFCI compresses 105 financial series — money markets, credit, leverage — into a weekly index where zero means average conditions. Sustained positive readings have accompanied every credit-driven downturn since 1973, often tightening before labor data reacts."
+    stlfsi_stress: "The St. Louis Fed stress index aggregates 18 series across yields, spreads, and volatility into one stress gauge. It is more volatile than NFCI but reacts faster — useful as an early financial-panic detector, especially around events like March 2020."
+    hy_spread: "High-yield spreads measure the premium junk-rated borrowers pay over Treasuries. Widening means markets are repricing default risk — historically rising sharply before and during every recession, and one of the fastest credit-stress indicators available weekly."
+    bbb_spread: "The BBB option-adjusted spread is the investment-grade counterpart: the cheapest borrowing tier above junk. Broadening of the BBB premium confirms that stress is escaping the speculative tier into mainstream corporate credit — a corroborating signal, not a leading one on its own."
+    sloos_tightening: "The Fed's Senior Loan Officer survey asks banks directly whether they are tightening standards on commercial and industrial loans. Bankers restrict credit before borrowers visibly weaken — making SLOOS one of the few surveys that genuinely leads, although it publishes only quarterly."
+    permits_decline: "Building permits lead actual construction by months, and construction leads the cycle — housing has entered nearly every US recession first, sometimes two years early (2006 vs the 2007 peak). A sustained YoY decline is one of the slowest but most reliable warnings on the panel."
+    housing_starts_decline: "Housing starts confirm the permits signal in real activity: actual ground-breaking falling year-over-year means builders see unsold demand ahead. Housing is the most interest-rate-sensitive sector, which is why it moves first when policy tightens."
+    durable_orders_decline: "Durable goods orders capture business and consumer commitment to big-ticket purchases — machinery, vehicles, appliances. They are noisy month-to-month but the year-over-year trend turns negative early in slowdowns as firms postpone investment first."
+    claims_trend: "Weekly initial jobless claims are the highest-frequency labor indicator that exists — a rising four-week average means layoffs are starting in real time, weeks before payrolls confirm it. It is the earliest real-time labor signal on the panel."
+    continued_claims_rise: "Continued claims measure how long the unemployed stay unemployed — rising insured unemployment means laid-off workers are not finding new jobs, a more serious deterioration than layoffs alone. It rises from its cycle trough as the labor market loses absorptive capacity."
+    temp_help_decline: "Firms cut temporary staff before permanent staff — temp help is the labor market's shock absorber and historically turns down months before payrolls. A sustained YoY decline has preceded every recession for which the series exists."
+    jolts_flows: "JOLTS tracks job openings and quits: openings falling means labor demand cooling, while quits falling means workers no longer trust outside opportunities. Both deteriorating together captures labor-market confidence cracking from both sides."
+    cfnaid_weak: "The Chicago Fed National Activity Index averages 85 monthly indicators across production, employment, consumption, and housing into a single diffusion measure. A 3-month average below −0.7 has historically coincided with the economy operating well below trend — broad weakness rather than one sector failing."
+    indpro_decline: "Industrial production is one of the four coincident series NBER itself consults when dating recessions. A year-over-year decline is nearly a coincident signal — it arrives late as a warning but is highly reliable as confirmation that the slowdown is real."
+    sahm_rule: "The Sahm rule fires when the 3-month average unemployment rate sits 0.5pp above its 12-month low — a near-perfect real-time recession-onset detector designed by Claudia Sahm. Crucially it timestamps the start of a recession rather than forecasting one; it belongs to the nowcast block and carries no forecast weight."
+    chauvet_piger: "The Chauvet–Piger smoothed recession probabilities estimate the likelihood that the economy is currently in recession, using the same four coincident series NBER weighs. Values that jump and stay elevated have historically aligned with the official dating — the market's best 'are we in one now' gauge."
+    sahm_states: "An experimental regional nowcast: counting how many individual states have crossed their own Sahm-rule trigger. Recessions rarely start uniformly — state-level diffusion can reveal a downturn broadening before the national rate trips, at the cost of noisier signals."
   back: "← back"
   disclaimer: "Informational data only — not investment advice. Historical frequencies do not guarantee future results."
   method_title: "Methodology"
@@ -77,6 +248,88 @@ site:
   audit_title: "Self-audit log"
   audit_empty: "No audit posts yet — the first one ships with the next weekly digest."
   audit_published: "published"
+
+glossary:
+  yield_curve_inversion:
+    title: "Yield curve inversion"
+    desc: "What an inverted Treasury yield curve is, why it predicts recessions, and where it has failed."
+    body: |
+      The yield curve plots Treasury borrowing costs across maturities. Normally long rates exceed short ones — investors demand a premium for locking money away. An inversion flips this: short-term yields rise above long-term ones because markets expect the Federal Reserve to cut rates in the future, usually in response to weakening growth.
+      ## Why it predicts recessions
+      Two mechanisms are at work. Expectations: traders pricing future cuts are implicitly pricing future weakness. Credit mechanics: banks borrow short and lend long, so an inverted curve squeezes lending margins and discourages new credit — tightening financial conditions before the slowdown arrives. The 10Y–3M spread has preceded every US recession since the late 1960s, typically by 6–18 months.
+      ## Where it fails
+      It is a warning, not a verdict. Inversions in 1966–67 and 2023–24 produced no recession — the latter becoming the longest false alarm on record, as a deposit glut kept bank margins healthy and the credit channel never bit. That is why this monitor treats the curve as one signal among twenty rather than a standalone oracle.
+      > **Fact:** After the 2022–24 inversion, several analysts publicly declared the signal 'broken'. Similar obituaries were written after the 1966 false alarm — the curve then correctly preceded the next eight recessions.
+  sahm_rule:
+    title: "The Sahm rule"
+    desc: "A real-time recession-onset detector based on the unemployment rate — what it measures and its limits."
+    body: |
+      The Sahm rule, proposed by economist Claudia Sahm in 2019, triggers when the three-month average unemployment rate rises 0.5 percentage points above its lowest value over the previous twelve months. It has correctly identified the start of every US recession since the 1970s, usually within months of the NBER peak.
+      ## Why it works
+      Unemployment rises in a self-reinforcing way once a recession begins: layoffs reduce income, which reduces demand, which produces more layoffs. The 0.5pp threshold is tuned to capture that transition while filtering out normal labor-market noise — small upticks mean little, but once momentum builds past half a point, a downturn is almost always underway.
+      ## What it is not
+      It is deliberately not a forecast — it timestamps onset rather than predicting it, which is why this monitor counts it in the nowcast block with zero forecast weight. It also produced its first historical wrinkle in August 2024, when it triggered on labor-force growth (more job seekers, not more layoffs) without a recession following.
+      > **Fact:** The rule's purpose was originally practical rather than academic — Sahm designed it as an automatic trigger for sending stimulus payments, since Congress tends to act months too late.
+  nber_recession:
+    title: "How NBER dates recessions"
+    desc: "Who officially declares US recessions, what criteria they use, and why the calls come late."
+    body: |
+      In the United States recessions are not declared by the government or by a GDP rule — they are dated after the fact by the Business Cycle Dating Committee of the National Bureau of Economic Research, a private research institution whose chronology is the accepted standard.
+      ## Not two quarters of GDP
+      The popular 'two consecutive quarters of negative GDP' shorthand is a rule of thumb, not the definition. The committee weighs a basket of monthly indicators — employment, real personal income, industrial production, wholesale-retail sales, real manufacturing-and-trade sales — looking for a decline that is significant, persistent, and broad-based across the economy.
+      ## Why the calls are late
+      Official announcements arrive 4–21 months after the fact: the committee prefers accuracy over speed, waiting for revisions and for the trend to become unambiguous. The 2020 recession was declared in June 2020 — already over by then (it ended in April). This inherent delay is precisely why real-time signal monitoring exists: by the time NBER speaks, the episode is usually history.
+      > **Fact:** The committee met in July 2021 to date the COVID trough — the fastest trough call on record. The 1980 recession's peak was announced in June of that year, just five months in — unusually fast, because the decline was already unmistakable.
+  credit_spread:
+    title: "Credit spreads"
+    desc: "The premium corporate borrowers pay over Treasuries — the market's stress thermometer."
+    body: |
+      A credit spread is the extra yield a corporate bond pays above a comparable Treasury — compensation for default risk. The option-adjusted spread (OAS) strips out embedded options to make the comparison clean. When spreads widen, investors are repricing the odds of default; when they compress, credit is perceived as safe.
+      ## High yield vs investment grade
+      High-yield (junk) spreads are the sensitive end — HY issuers fail first in downturns, so HY OAS widens earliest and sharpest, typically spiking well above 5–6% in recessions versus ~3% in calm times. The BBB spread tracks investment-grade credit: broadening there means stress has left the speculative tier and entered mainstream corporate borrowing — a more serious escalation.
+      ## Why it leads
+      Credit markets reprice risk on expectations, not on realized losses — spreads begin widening while default rates are still low, often ahead of equity markets acknowledging the problem. In 2007–08 HY spreads began widening months before the labor market cracked; in 2015–16 they correctly flagged the oil-sector bust that never became a recession.
+      > **Fact:** In February–March 2020, HY OAS jumped from 3.6% to over 10% in about four weeks — the fastest credit repricing on record, matching a shock that also gave the shortest recession ever dated.
+  nfci:
+    title: "The NFCI"
+    desc: "The Chicago Fed's weekly financial-conditions index — 105 indicators in one number."
+    body: |
+      The National Financial Conditions Index, published weekly by the Federal Reserve Bank of Chicago, summarizes 105 measures of US financial activity — money markets, debt and equity markets, and the banking system — into a single index where zero represents average conditions since 1971.
+      ## Reading it
+      Positive values mean tighter-than-average conditions: wider spreads, tighter credit, higher volatility. Negative values mean looser than average. Sustained positive readings have accompanied every credit-driven downturn in the sample — the index crossed into persistent positive territory in 2007, spiked violently in 2008, and briefly surged in March 2020.
+      ## Why it matters
+      Credit is the transmission channel between financial markets and the real economy — when financial conditions tighten, borrowing, hiring, and investment follow with a lag. The NFCI captures that channel earlier and more comprehensively than any single spread, which is why it sits near the top of this monitor's financial block.
+      > **Fact:** The index is computed with a Kalman-style filter that weights indicators by their correlation with the overall state — volatile series automatically contribute less, which keeps the NFCI readable through noisy weeks.
+  leading_vs_coincident:
+    title: "Leading vs coincident signals"
+    desc: "The difference between forecasting a recession and detecting one already underway."
+    body: |
+      Recession indicators split into two fundamentally different jobs. Leading signals fire months before a downturn — they forecast. Coincident (nowcast) signals confirm a recession already in progress — they timestamp. Confusing the two is the most common methodological error in recession watching.
+      ## Why both are needed
+      A pure forecast panel is blind to unmodeled shocks: no yield curve predicted COVID-19. A pure nowcast panel gives no runway — by the time it fires, the recession has started. This monitor keeps them as separate blocks: forecast signals drive the composite score, nowcast signals confirm or veto whether a recession may already be underway.
+      ## Examples
+      Leading: yield curve (6–18 months early), building permits (often 12+ months), credit spreads, bank lending standards. Coincident: the Sahm rule, Chauvet–Piger probabilities, initial claims — fast, real-time, but describing the present rather than the future.
+      > **Fact:** The Sahm rule's perfect record is for onset detection — economists calling it 'a recession predictor' are describing it wrong, which is exactly the kind of category error a nowcast/forecast split prevents.
+  data_revisions:
+    title: "Data revisions & vintages"
+    desc: "Why yesterday's economic data changes — and why honest backtests use the version people actually saw."
+    body: |
+      Economic statistics are not fixed at publication: payrolls are revised for months, GDP gets three official estimates plus annual rewrites, even unemployment series are restated. The number in the database today is often materially different from the number that was published on that date.
+      ## The look-ahead trap
+      A backtest that asks 'would this signal have fired?' using today's revised data is subtly cheating — it answers the question with information nobody had at the time. Studies have shown indicators can look dramatically more accurate on revised history than they were in real time.
+      ## Vintages as the fix
+      ALFRED (FRED's archival sibling) stores every published version of a series with its release date — the 'vintage'. This monitor keeps vintages for its series, letting episode analysis and backtests replay exactly what was knowable on a given date. It is the difference between 'what we knew then' and 'what we know now'.
+      > **Fact:** The Philadelphia Fed's real-time data research found that early GDP releases have missed entire NBER recessions in real time — the revised history in textbooks is cleaner than what policymakers actually saw.
+  composite_score:
+    title: "The composite score"
+    desc: "How individual signal states combine into the 12-month recession-risk estimate."
+    body: |
+      Each signal on the panel sits in one of four states: ok, watch, warning, or critical. The composite score is a weighted sum of the active states — watch contributes half a point, warning one point, critical a point and a half, each multiplied by that signal's own weight in the panel.
+      ## From score to risk band
+      The score maps onto four bands calibrated against 1967–2026 history: low (under 5, roughly the base rate of ~15%), elevated (5–9), high (9–13), and severe (13+). The band boundaries were chosen so that higher bands correspond to meaningfully higher historical recession frequency — the band, not the raw number, is the estimate to read.
+      ## Why a sum, not a model
+        A fitted model (logit/probit) can squeeze more precision out of the same panel — but its coefficients are opaque and unstable out of sample. The weighted sum is fully auditable: every point of the score can be attributed to a specific signal, which matters more for a public monitor than fractional accuracy gains.
+      > **Fact:** The score deliberately includes no stock-market series and no sentiment surveys — every input is a physical-activity or credit-measurement series, on the principle that recessions are confirmed in the real economy, not in expectations.
 
 state_change:
   cleared: "cleared"

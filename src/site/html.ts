@@ -67,6 +67,11 @@ const BASE_CSS = `
   .lang a.on { color: #e5e7eb; }
   .lang a.off { color: #475569; }
   .intro { color: #64748b; font-size: 14px; line-height: 1.6; margin-top: 28px; }
+  .factbox { background: #16233b; border-left: 3px solid #7dd3fc; border-radius: 0 10px 10px 0; padding: 12px 18px; margin: 18px 0; color: #cbd5e1; font-size: 14px; line-height: 1.6; }
+  .faq-item h3 { margin-top: 30px; }
+  .episode-article { margin-top: 36px; }
+  .episode-article h3 { letter-spacing: 0.5px; }
+  .prose .meta { color: #64748b; font-size: 14px; }
 `;
 
 const STATE_DOT: Record<string, string> = {
@@ -264,8 +269,13 @@ export function indexHtml(
   <footer>
     <span>${esc(L.updated)}: ${esc(updated)} UTC</span>
     <a href="method/">${esc(L.method_link)}</a>
-    <a href="audit/">${esc(L.audit_link)}</a>
+    <a href="signals/">${esc(L.signals_link)}</a>
     <a href="episodes/">${esc(L.episodes_link)}</a>
+    <a href="history/">${esc(L.history_link)}</a>
+    <a href="glossary/">${esc(L.glossary_link)}</a>
+    <a href="faq/">${esc(L.faq_link)}</a>
+    <a href="audit/">${esc(L.audit_link)}</a>
+    <a href="about/">${esc(L.about_link)}</a>
     ${opts.bot ? `<a href="${botLink}">@${esc(opts.bot)}</a>` : ""}
     ${opts.feedHref ? `<a href="${esc(opts.feedHref)}">RSS</a>` : ""}
   </footer>
