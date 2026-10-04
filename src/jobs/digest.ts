@@ -252,13 +252,14 @@ export async function jobCustomDigests(): Promise<void> {
  * today is the configured weekly day and its time has come. Used by the
  * fixed-time cron and by the GitHub Actions run.
  */
-export async function jobDigestAuto(): Promise<void> {
+export async function jobDigestAuto(opts?: { weekly?: "auto" | "force" }): Promise<void> {
   const cfg = getConfig();
   const now = new Date();
   const [wh, wm] = cfg.channels.defaults.weekly_digest_time_utc.split(":").map(Number);
   const weeklyDue =
     now.getUTCDay() === cfg.channels.defaults.weekly_digest_day_utc &&
-    now.getUTCHours() * 60 + now.getUTCMinutes() >= wh * 60 + wm;
+    (opts?.weekly === "force" ||
+      now.getUTCHours() * 60 + now.getUTCMinutes() >= wh * 60 + wm);
   await jobDigest("daily");
   if (weeklyDue) {
     await jobDigest("weekly");

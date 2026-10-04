@@ -14,7 +14,9 @@
       (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code) ||
       (navigator.language || "en");
     lang = String(lang).slice(0, 2).toLowerCase();
-    return lang === "ru" ? "ru" : "en";
+    // Any 2-letter code passes through — unsupported locales fall back to
+    // ../data.json in tryLoad, so adding a locale needs no JS change (F14).
+    return /^[a-z]{2}$/.test(lang) ? lang : "en";
   }
 
   function applyTheme() {
@@ -53,7 +55,9 @@
       html += '<div class="panel"><h2>' + esc(L.trend_90d || "Trend") + '</h2><div class="spark">';
       var scale = d.score_scale || 14; // server-provided (model.yaml bands)
       for (var i = 0; i < trend.length; i++) {
-        var h = Math.max(4, Math.round((Math.min(trend[i], scale) / scale) * 100));
+        // [ts, score] pairs; tolerate plain numbers from older payloads
+        var v = Array.isArray(trend[i]) ? trend[i][1] : trend[i];
+        var h = Math.max(4, Math.round((Math.min(v, scale) / scale) * 100));
         var last = i === trend.length - 1;
         html += '<div style="height:' + h + "%" + (last ? ";background:" + esc(d.bucket_color || "") : "") + '"></div>';
       }

@@ -165,6 +165,7 @@ export function getLatestComposite(
 }
 
 export interface CompositeSnapshot {
+  ts: string;
   score: number;
   bucket: string;
   prob_label: string;
@@ -183,7 +184,7 @@ export function getCompositeAtOrBefore(
   const db = conn ?? getDb();
   return db
     .prepare(
-      `SELECT score, bucket, prob_label, detail_json FROM composite_snapshots
+      `SELECT ts, score, bucket, prob_label, detail_json FROM composite_snapshots
        WHERE ts <= ? ORDER BY ts DESC LIMIT 1`,
     )
     .get(cutoff) as CompositeSnapshot | undefined;

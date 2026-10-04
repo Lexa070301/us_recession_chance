@@ -6,6 +6,8 @@ import {
   type PublishResult,
   type Venue,
 } from "../types.js";
+import type Database from "better-sqlite3";
+import { alreadySyndicated, markSyndicated } from "../repo.js";
 
 /**
  * Buffer (PLAN2 §3.6): one venue multiplexing X + Threads + LinkedIn via the
@@ -87,9 +89,14 @@ export const bufferVenue: Venue = {
   handles(post) {
     return syndicationLocales().includes(post.locale);
   },
-  async publish(post: ExternalPost): Promise<PublishResult | null> {
+  async publish(post: ExternalPost, conn?: Database.Database): Promise<PublishResult | null> {
     const apiKey = process.env.BUFFER_API_KEY!;
+    const failures: Error[] = [];
     for (const ch of channels()) {
+      // Per-network dedup (audit F4): a failure in one network must not
+      // cause already-published networks to repost on retry.
+      const venueKey = `buffer:${ch.network}`;
+      if (alreadySyndicated(venueKey, post.locale, post.key, conn)) continue;
       // X gets the tightest cut; LinkedIn gets near-full text.
       const base =
         ch.network === "x"
@@ -99,7 +106,15 @@ export const bufferVenue: Venue = {
             : post.text;
       let text = clip(base, ch.limit - (post.url ? post.url.length + 2 : 0));
       if (post.url && !text.includes(post.url)) text = `${text}\n${post.url}`;
-      await createPost(apiKey, ch.id, clip(text, ch.limit));
+      try {
+        await createPost(apiKey, ch.id, clip(text, ch.limit));
+        markSyndicated(venueKey, post.locale, post.key, null, conn);
+      } catch (err) {
+        failures.push(err instanceof Error ? err : new Error(String(err)));
+      }
+    }
+    if (failures.length) {
+      throw new Error(failures.map((e) => e.message).join("; "));
     }
     return null;
   },

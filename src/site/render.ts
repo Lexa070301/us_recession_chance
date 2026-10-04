@@ -40,9 +40,13 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
 
   for (const loc of locales) {
     const data = buildDashboardData(loc, db);
-    const html = indexHtml(data, loc, { bot });
+    // Feed link must resolve from BOTH root pages (feed-*.xml next to
+    // index.html) and locale subpages (/ru/index.html → ../feed-ru.xml).
+    const feedName = `feed-${loc}.xml`;
+    const feedHref = loc === fallback ? feedName : `../${feedName}`;
+    const html = indexHtml(data, loc, { bot, feedHref });
     write(`data.${loc}.json`, JSON.stringify(data, null, 2));
-    write(`feed.${loc}.xml`, atomFeed(loc, siteUrl, db));
+    write(feedName, atomFeed(loc, siteUrl, db));
     if (loc === fallback) {
       write("index.html", html);
       write("data.json", JSON.stringify(data, null, 2));
@@ -51,6 +55,8 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
       write(`${loc}/index.html`, html);
     }
   }
+  // artifact-deploy skips Jekyll anyway; .nojekyll keeps branch-deploys safe.
+  write(".nojekyll", "");
 
   // Mini App (PLAN2 §14): versioned sources in web/app/ → site/app/.
   const appSrc = join(dirname(fileURLToPath(import.meta.url)), "../../web/app");

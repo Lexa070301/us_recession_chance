@@ -167,6 +167,9 @@ export const signalDefSchema = z.object({
   block: z.enum(["financial", "credit", "housing", "labor", "composite", "nowcast"]),
   weight: z.number(),
   input: inputRefSchema,
+  /** Display-unit override — for derived values whose unit differs from the
+   * input series (e.g. sahm_states counts states, not percent). */
+  unit: z.string().optional(),
   evaluator: evaluatorSchema,
   /** Flap guard: transitions closer than this to the previous event update
    * state silently (no SignalEvent) unless they escalate to `critical`. */

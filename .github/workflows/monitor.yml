@@ -60,6 +60,7 @@ jobs:
           # PLAN2 §3/§4: this runner is the ONLY publishing environment.
           # vars.* act as feature toggles; unset secrets → venues self-disable.
           SYNDICATION_ENABLED: ${{ vars.SYNDICATION_ENABLED }}
+          SELF_AUDIT_ENABLED: ${{ vars.SELF_AUDIT_ENABLED }}
           CARD_ENABLED: ${{ vars.CARD_ENABLED }}
           SITE_URL: ${{ vars.SITE_URL }}
           TELEGRAPH_TOKEN_EN: ${{ secrets.TELEGRAPH_TOKEN_EN }}
@@ -79,12 +80,11 @@ jobs:
           REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
           REDDIT_SUBREDDIT: ${{ vars.REDDIT_SUBREDDIT }}
         run: |
-          # Weekly digest + card + syndication + self-audit must fire on the
-          # configured weekly DAY regardless of weekly_digest_time_utc —
-          # jobDigestAuto alone would silently skip weekly whenever the
-          # configured time is later than this 13:20 run (audit H2). All
-          # dedup keys (w:/a:) make a second invocation a no-op.
-          npx tsx -e "import 'dotenv/config'; import { jobDigestAuto, jobDigest } from './src/jobs/digest.ts'; import { jobSelfAudit } from './src/jobs/selfAudit.ts'; import { getConfig } from './src/config/load.ts'; jobDigestAuto().then(async () => { if (new Date().getUTCDay() === getConfig().channels.defaults.weekly_digest_day_utc) { await jobDigest('weekly'); await jobSelfAudit(); } })"
+          # Weekly digest + card + syndication + self-audit fire on the
+          # configured weekly DAY regardless of weekly_digest_time_utc
+          # (`weekly: "force"` — this single 13:20 run IS the weekly slot;
+          # audit H2/F4: one invocation only, no double weekly chain).
+          npx tsx -e "import 'dotenv/config'; import { jobDigestAuto } from './src/jobs/digest.ts'; jobDigestAuto({ weekly: 'force' })"
 
   # GitHub Pages (PLAN2 §2): dashboard + feeds + data.json (Mini App).
   # Pages source must be set to "GitHub Actions" in repo settings once;

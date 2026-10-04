@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { getConfig } from "../config/load.js";
 import { getDb } from "../data/db.js";
 
 /**
@@ -23,6 +24,8 @@ export function atomFeed(
   conn?: Database.Database,
 ): string {
   const db = conn ?? getDb();
+  const fallback = getConfig().channels.defaults.fallback_locale;
+  const pageUrl = `${siteUrl}${locale === fallback ? "" : `/${locale}`}`;
   const rows = db
     .prepare(
       `SELECT digest_key, target_id, payload_text, sent_at FROM deliveries
@@ -42,9 +45,9 @@ export function atomFeed(
       const body = esc(r.payload_text);
       return `  <entry>
     <title>${esc(title)}</title>
-    <id>urn:usrecessionwatch:${esc(r.digest_key)}:${esc(r.target_id)}</id>
+    <id>urn:usrecessionwatch:${esc(locale)}:${esc(r.digest_key)}</id>
     <updated>${ts}</updated>
-    <link href="${esc(siteUrl)}"/>
+    <link href="${esc(pageUrl)}"/>
     <content type="html">&lt;pre&gt;${body}&lt;/pre&gt;</content>
   </entry>`;
     })
@@ -53,9 +56,10 @@ export function atomFeed(
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>US Recession Watch (${esc(locale)})</title>
-  <id>${esc(siteUrl)}/feed.${esc(locale)}.xml</id>
+  <id>${esc(siteUrl)}/feed-${esc(locale)}.xml</id>
+  <author><name>US Recession Watch</name></author>
   <updated>${updated}</updated>
-  <link href="${esc(siteUrl)}/feed.${esc(locale)}.xml" rel="self"/>
+  <link href="${esc(siteUrl)}/feed-${esc(locale)}.xml" rel="self"/>
 ${entries}
 </feed>
 `;

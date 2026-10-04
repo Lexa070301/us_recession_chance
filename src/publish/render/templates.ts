@@ -110,7 +110,7 @@ function signalName(key: string, locale: string): string {
 
 function signalUnit(key: string): string | undefined {
   const def = getSignalDef(key);
-  return def ? getSeriesDef(def.input.key)?.unit : undefined;
+  return def ? (def.unit ?? getSeriesDef(def.input.key)?.unit) : undefined;
 }
 
 export function splitByBlock(states: SignalStateRow[]): {
@@ -349,7 +349,7 @@ export function renderAnalytics(states: SignalStateRow[], locale: string): strin
         okCount++;
         continue;
       }
-      const unit = getSeriesDef(def.input.key)?.unit;
+      const unit = def.unit ?? getSeriesDef(def.input.key)?.unit;
       let line = `${STATE_ICON[state]} ${t(locale, `signal.${def.key}.name`)} — ${t(locale, `severity.${state}`)}`;
       if (st?.last_value !== null && st?.last_value !== undefined) {
         line += ` · ${formatWithUnit(st.last_value, unit, locale)}`;

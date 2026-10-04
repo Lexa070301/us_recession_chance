@@ -17,6 +17,7 @@ card:
   caption: "📊 Recession risk: {{bucket}} · score {{score}} · US Recession Watch"
   nowcast_calm: "Nowcast: calm"
   nowcast_active: "Nowcast: {{names}}"
+  trend_90d: "score · 90 days"
 
 site:
   title: "US Recession Watch"
@@ -45,6 +46,7 @@ unit:
   thousands_saar: "k"
   persons: "k"
   usd_millions: "M"
+  count: ""
 
 event:
   title: "{{icon}} {{name}}"
@@ -76,8 +78,8 @@ composite:
 audit:
   title: "🔍 Self-audit — {{week}}"
   score_year: "Score 12m ago: {{score}} ({{bucket}}) → {{verdict}}"
-  verdict_hit: "a recession did begin within 12m ✅"
-  verdict_miss: "no recession within 12m ✅"
+  verdict_hit: "a recession began within 12m (signal confirmed)"
+  verdict_miss: "no recession began within 12m"
   verdict_open: "outcome still open — until {{until}}"
   no_snapshot: "Snapshot history starts {{date}} — earlier weeks: n/a"
   signals_header: "Signal record (replay, latest data):"

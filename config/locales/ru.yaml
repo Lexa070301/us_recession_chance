@@ -17,6 +17,7 @@ card:
   caption: "📊 Риск рецессии: {{bucket}} · скор {{score}} · US Recession Watch"
   nowcast_calm: "Ноукаст: спокойно"
   nowcast_active: "Ноукаст: {{names}}"
+  trend_90d: "скор · 90 дней"
 
 site:
   title: "US Recession Watch"
@@ -45,6 +46,7 @@ unit:
   thousands_saar: "k"
   persons: "k"
   usd_millions: " млн"
+  count: ""
 
 event:
   title: "{{icon}} {{name}}"
@@ -77,8 +79,8 @@ composite:
 audit:
   title: "🔍 Самоаудит — {{week}}"
   score_year: "Скор 12 мес назад: {{score}} ({{bucket}}) → {{verdict}}"
-  verdict_hit: "рецессия началась в течение 12 мес ✅"
-  verdict_miss: "рецессии в течение 12 мес не было ✅"
+  verdict_hit: "рецессия началась в течение 12 мес (сигнал подтвердился)"
+  verdict_miss: "рецессия в течение 12 мес не началась"
   verdict_open: "исход ещё неизвестен — до {{until}}"
   no_snapshot: "История снапшотов начинается с {{date}} — раньше: н/д"
   signals_header: "Послужной список сигналов (replay, свежие данные):"

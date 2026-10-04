@@ -45,7 +45,9 @@ function scoreVerdict(
   }
   const hit = recessions.some((r) => {
     const s = monthIndex(r.start);
-    return s > cutoff && s <= cutoff + HORIZON_MONTHS;
+    // >= : a recession starting in the snapshot's own month counts — the
+    // 12-month horizon includes it (audit F12).
+    return s >= cutoff && s <= cutoff + HORIZON_MONTHS;
   });
   return { verdict: hit ? "hit" : "miss", until };
 }
@@ -94,7 +96,14 @@ export function renderAudit(
 
 export async function jobSelfAudit(): Promise<void> {
   // Publication environment only — prevents a double post from the server DB.
-  if (process.env.SYNDICATION_ENABLED !== "true") return;
+  // Gated separately from external syndication (audit F5): self-audit posts
+  // to Telegram channels, SYNDICATION_ENABLED gates external venues only.
+  if (
+    process.env.SYNDICATION_ENABLED !== "true" &&
+    process.env.SELF_AUDIT_ENABLED !== "true"
+  ) {
+    return;
+  }
   const cfg = getConfig();
   const db = getDb();
   if (new Date().getUTCDay() !== cfg.channels.defaults.weekly_digest_day_utc) return;
@@ -150,7 +159,9 @@ export async function jobSelfAudit(): Promise<void> {
   // --- score a year ago ---------------------------------------------------
   const cutoff52 = new Date(Date.now() - 364 * 864e5).toISOString().slice(0, 19).replace("T", " ");
   const snap = getCompositeAtOrBefore(cutoff52, db);
-  const cutoffMonth = cutoff52.slice(0, 7);
+  // Verdict window anchors on the snapshot's own month — getCompositeAtOrBefore
+  // may return an older row on sparse snapshots (audit F12).
+  const cutoffMonth = (snap?.ts ?? cutoff52).slice(0, 7);
   const verdict = scoreVerdict(recessions, cutoffMonth);
 
   const locales = new Set<string>([cfg.channels.defaults.fallback_locale]);

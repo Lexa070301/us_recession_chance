@@ -4,9 +4,9 @@ import { scoreScaleMax } from "../signals/score.js";
 const esc = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function sparkbars(trend: number[], accent: string): string {
+function sparkbars(trend: [string, number][], accent: string): string {
   const max = scoreScaleMax();
-  const pts = trend.slice(-60);
+  const pts = trend.slice(-60).map((p) => p[1]);
   if (!pts.length) return `<div class="spark empty">—</div>`;
   const bars = pts
     .map((v, i) => {
@@ -31,7 +31,12 @@ function chip(e: { name: string; state: string; value: string }): string {
 }
 
 /** Static dashboard page — no JS deps, mirrors the PNG card layout. */
-export function indexHtml(d: DashboardData, locale: string, opts: { bot?: string }): string {
+export function indexHtml(
+  d: DashboardData,
+  locale: string,
+  opts: { bot?: string; feedHref?: string },
+): string {
+  const feedHref = opts.feedHref ?? `feed-${locale}.xml`;
   const L = d.labels;
   const modelLine = d.model_prob_label
     ? `${esc(d.model_prob_label)} · ${esc(L.score)} ${d.score.toFixed(1)}`
@@ -47,6 +52,7 @@ export function indexHtml(d: DashboardData, locale: string, opts: { bot?: string
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(L.title)}</title>
+<link rel="alternate" type="application/atom+xml" href="${esc(feedHref)}" title="US Recession Watch (${esc(locale)})">
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; box-sizing: border-box; }
@@ -82,7 +88,7 @@ export function indexHtml(d: DashboardData, locale: string, opts: { bot?: string
   <footer>
     <span>${esc(L.updated)}: ${esc(updated)} UTC</span>
     ${opts.bot ? `<a href="https://t.me/${esc(opts.bot)}">@${esc(opts.bot)}</a>` : ""}
-    <a href="feed.${esc(locale)}.xml">RSS</a>
+    <a href="${esc(feedHref)}">RSS</a>
   </footer>
 </main>
 </body>

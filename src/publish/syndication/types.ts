@@ -1,4 +1,5 @@
 /** External-venue contract (PLAN2 §3). */
+import type Database from "better-sqlite3";
 
 export interface ExternalPost {
   /** Dedup key: d:YYYY-MM-DD · w:YYYY-Www · a:YYYY-Www (self-audit). */
@@ -30,7 +31,9 @@ export interface Venue {
   enabled(): boolean;
   /** Whether this venue handles the given post (locale filter etc.). */
   handles(post: ExternalPost): boolean;
-  publish(post: ExternalPost): Promise<PublishResult | null>;
+  /** `conn` lets multi-target venues (Buffer) dedup each target on the
+   * runner's connection — defaults to the shared singleton when omitted. */
+  publish(post: ExternalPost, conn?: Database.Database): Promise<PublishResult | null>;
 }
 
 /** Locales eligible for syndication — Telegraph overrides per-token. */
@@ -62,5 +65,9 @@ export async function postJson(
   if (!res.ok) {
     throw new Error(`POST ${url} → ${res.status}: ${(await res.text()).slice(0, 300)}`);
   }
-  return res.json();
+  // 204 No Content (e.g. Discord webhooks without ?wait=true) or any empty
+  // body: res.json() would throw a parse error → venue marked failed →
+  // duplicate on retry (audit F1).
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }

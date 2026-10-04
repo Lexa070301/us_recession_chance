@@ -90,7 +90,7 @@ export function collectCardData(locale: string, conn?: Database.Database): CardD
     .slice(0, 3)
     .map((s) => {
       const def = getSignalDef(s.signal_key);
-      const unit = def ? getSeriesDef(def.input.key)?.unit : undefined;
+      const unit = def ? (def.unit ?? getSeriesDef(def.input.key)?.unit) : undefined;
       return {
         state: s.state,
         name: def ? t(locale, `signal.${def.key}.name`) : s.signal_key,

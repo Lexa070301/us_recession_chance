@@ -23,14 +23,21 @@ describe("site", () => {
     const written = renderSite(out, db);
     expect(written).toContain("index.html");
     expect(written).toContain("data.json");
-    expect(written).toContain("feed.en.xml");
+    expect(written).toContain("feed-en.xml");
+    expect(written).toContain("feed-ru.xml");
+    expect(written).toContain(".nojekyll");
     expect(written).toContain("ru/index.html");
     const html = readFileSync(join(out, "index.html"), "utf8");
     expect(html).toContain("US RECESSION WATCH");
     expect(html).toContain("<html");
-    // feeds are well-formed XML
-    const feed = readFileSync(join(out, "feed.en.xml"), "utf8");
+    expect(html).toContain('rel="alternate"');
+    // feed links resolve correctly from the /ru/ subpage (audit F3)
+    const ruHtml = readFileSync(join(out, "ru", "index.html"), "utf8");
+    expect(ruHtml).toContain("../feed-ru.xml");
+    // feeds are well-formed XML with required author element (audit F10)
+    const feed = readFileSync(join(out, "feed-en.xml"), "utf8");
     expect(feed).toContain("<feed");
+    expect(feed).toContain("<author>");
     expect(readdirSync(join(out, "ru"))).toContain("index.html");
     // Mini App sources are copied into site/app/ (PLAN2 §14)
     expect(written).toContain("app/index.html");

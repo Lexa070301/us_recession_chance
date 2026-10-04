@@ -2,6 +2,65 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 13: second external audit)
+
+Second audit of the PLAN2 build — 15 findings verified against code;
+10 confirmed and fixed, 5 rejected/deferred.
+
+### Fixed
+
+- **F1 (high)** `postJson` crashed on Discord's `204 No Content` —
+  venue marked failed → guaranteed weekly repost. Now returns `null`
+  for 204 _and_ any empty body. Covered by `postJson` unit tests.
+- **F2 (high)** `card.trend_90d` missing from both locales — i18next
+  printed the raw key on every weekly PNG card. Keys added; new
+  `test/locales.test.ts` compares the en/ru key sets with i18next
+  plural suffixes (`_one/_other/_few/_many`) normalized — ru needs
+  `_few/_many` forms en doesn't have, so naive parity is wrong.
+- **F3** `feed.${locale}.xml` link on `/ru/index.html` resolved to a
+  404 — feeds live at root. Renamed to spec form `feed-*.xml`, pages
+  get a relative `../` href, and `<link rel="alternate">` was added.
+- **F4 (part 1)** GHA weekly chain ran twice (`jobDigestAuto` weekly
+  branch + explicit `jobDigest("weekly")` call). Workflow now makes a
+  single `jobDigestAuto({ weekly: "force" })` call — fires weekly +
+  self-audit on the configured day regardless of `weekly_digest_time_utc`.
+- **F4 (part 2)** Buffer posted to X/Threads/LinkedIn under ONE dedup
+  key — a late-network failure reposted the early ones on retry.
+  Per-network `buffer:<network>` dedup rows now mark each success
+  independently; failed networks retry without reposting. `Venue.publish`
+  gained an optional `conn` param so dedup runs on the runner's DB.
+- **F5** Self-audit was gated on `SYNDICATION_ENABLED` — disabling
+  external venues silently killed the Telegram self-audit. New
+  `SELF_AUDIT_ENABLED` env gate; either flag enables it.
+- **F6** `sahm_states` value is a state count but inherited `percent`
+  unit → "7.00%" in digests/site/Mini App. Signals can now override
+  `unit:` in signals.yaml (`unit: count` set; `unit.count` locale key).
+- **F7** `data.json.trend` was `number[]` per spec it should carry
+  timestamps — now `[[ts, score], ...]`; Mini App + sparkbars updated
+  (app.js tolerates both shapes for cached payloads).
+- **F8** Feeds renamed to `feed-*.xml` (spec form); `.nojekyll`
+  generated; Atom entries got `<author>`, per-entry canonical link,
+  and target-independent `<id>`s.
+- **F12** `scoreVerdict` excluded a recession starting in the snapshot
+  month (`>` → `>=`) and anchored the 12m window on wall-clock instead
+  of the snapshot's own `ts` (now selected by the query).
+- **F13** `audit.verdict_miss`/`verdict_hit` emoji suggested the
+  outcome rather than the forecast quality — replaced with neutral text.
+- **F14** Mini App `pickLocale` hardcoded ru/en — now passes any
+  2-letter code through; unsupported locales fall back to `data.json`.
+
+### Rejected / deferred
+
+- **F9** `.nojekyll` — actually fixed alongside F8 (harmless one-liner).
+- **F11** `weekly_digest_time_utc` ignored in GHA — now explicit
+  `weekly: "force"` semantics + comment; the 13:20 run IS the slot.
+- **F15** External posts keep the bot promo footer — intentional CTA
+  to the product's main surface; audit itself marks it tolerable.
+- **`sahm_states` unit test** — already covered in
+  `test/sahmStates.test.ts` (ok/warning/critical/count/context).
+
+Tests: 93/93, typecheck clean, build clean.
+
 ## 2026-10-05 (implementation pass 12: going public + bot command menu)
 
 - **BSL-1.1 LICENSE** — source stays readable and self-hostable

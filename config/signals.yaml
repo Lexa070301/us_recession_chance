@@ -399,14 +399,67 @@ signals:
     block: nowcast
     weight: 0
     input: { key: unrate, transform: value }
+    unit: count # value = number of triggered states, not a percent
     min_event_gap_hours: 48 # state URs arrive in a batch; don't flap alerts
     evaluator:
       type: sahm_states
       params:
-        keys: [ur_state_al, ur_state_ak, ur_state_az, ur_state_ar, ur_state_ca, ur_state_co, ur_state_ct, ur_state_de, ur_state_dc, ur_state_fl, ur_state_ga, ur_state_hi, ur_state_id, ur_state_il, ur_state_in, ur_state_ia, ur_state_ks, ur_state_ky, ur_state_la, ur_state_me, ur_state_md, ur_state_ma, ur_state_mi, ur_state_mn, ur_state_ms, ur_state_mo, ur_state_mt, ur_state_ne, ur_state_nv, ur_state_nh, ur_state_nj, ur_state_nm, ur_state_ny, ur_state_nc, ur_state_nd, ur_state_oh, ur_state_ok, ur_state_or, ur_state_pa, ur_state_ri, ur_state_sc, ur_state_sd, ur_state_tn, ur_state_tx, ur_state_ut, ur_state_vt, ur_state_va, ur_state_wa, ur_state_wv, ur_state_wi, ur_state_wy]
+        keys:
+          [
+            ur_state_al,
+            ur_state_ak,
+            ur_state_az,
+            ur_state_ar,
+            ur_state_ca,
+            ur_state_co,
+            ur_state_ct,
+            ur_state_de,
+            ur_state_dc,
+            ur_state_fl,
+            ur_state_ga,
+            ur_state_hi,
+            ur_state_id,
+            ur_state_il,
+            ur_state_in,
+            ur_state_ia,
+            ur_state_ks,
+            ur_state_ky,
+            ur_state_la,
+            ur_state_me,
+            ur_state_md,
+            ur_state_ma,
+            ur_state_mi,
+            ur_state_mn,
+            ur_state_ms,
+            ur_state_mo,
+            ur_state_mt,
+            ur_state_ne,
+            ur_state_nv,
+            ur_state_nh,
+            ur_state_nj,
+            ur_state_nm,
+            ur_state_ny,
+            ur_state_nc,
+            ur_state_nd,
+            ur_state_oh,
+            ur_state_ok,
+            ur_state_or,
+            ur_state_pa,
+            ur_state_ri,
+            ur_state_sc,
+            ur_state_sd,
+            ur_state_tn,
+            ur_state_tx,
+            ur_state_ut,
+            ur_state_vt,
+            ur_state_va,
+            ur_state_wa,
+            ur_state_wv,
+            ur_state_wi,
+            ur_state_wy,
+          ]
         trigger: 0.5
         warn_count: 5
         critical_count: 10
     # EXPERIMENTAL (PLAN2 §7): state-level Sahm is noisier than the national
     # rule — count thresholds are starting points, no hist stats yet.
-

@@ -29,7 +29,8 @@ export const dashboardDataSchema = z.object({
   prob_label: z.string(),
   model_prob: z.number().nullable(),
   model_prob_label: z.string().nullable(),
-  trend: z.array(z.number()),
+  /** [ts, score] pairs — timestamps let clients align the axis (PLAN2 §14). */
+  trend: z.array(z.tuple([z.string(), z.number()])),
   active: z.array(
     z.object({
       key: z.string(),
@@ -65,7 +66,7 @@ export type DashboardData = z.infer<typeof dashboardDataSchema>;
 
 function stateEntry(s: SignalStateRow, locale: string) {
   const def = getSignalDef(s.signal_key);
-  const unit = def ? getSeriesDef(def.input.key)?.unit : undefined;
+  const unit = def ? (def.unit ?? getSeriesDef(def.input.key)?.unit) : undefined;
   return {
     key: s.signal_key,
     name: def ? t(locale, `signal.${def.key}.name`) : s.signal_key,
@@ -90,14 +91,12 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
     .map((s) => stateEntry(s, locale));
   const nowcastEntries = nowcast.map((s) => stateEntry(s, locale));
 
-  const trend = (
-    db
-      .prepare(
-        `SELECT score FROM composite_snapshots
-         WHERE ts >= datetime('now', '-90 days') ORDER BY ts`,
-      )
-      .all() as { score: number }[]
-  ).map((r) => r.score);
+  const trend = db
+    .prepare(
+      `SELECT ts, score FROM composite_snapshots
+       WHERE ts >= datetime('now', '-90 days') ORDER BY ts`,
+    )
+    .all() as [string, number][];
 
   const p = composite.modelProb;
   return dashboardDataSchema.parse({
