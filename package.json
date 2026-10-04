@@ -24,6 +24,7 @@
     "site": "tsx src/cli/site.ts",
     "menu-button": "tsx src/cli/menuButton.ts",
     "commands": "tsx src/cli/setCommands.ts",
+    "telegraph-token": "tsx src/cli/telegraph.ts",
     "fit-model": "tsx scripts/fitModel.ts",
     "backup": "tsx src/cli/backup.ts",
     "health": "tsx -e \"import 'dotenv/config'; import { jobHealthcheck } from './src/jobs/health.ts'; jobHealthcheck()\""
