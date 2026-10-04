@@ -36,7 +36,6 @@ plans:
   free:
     delivery_mode: digest # instant events are batched into daily digest
     custom_signals: false
-    min_severity_floor: warning # free users can't subscribe below 'warning'
   plus:
     delivery_mode: instant
     custom_signals: true

@@ -12,6 +12,8 @@ export interface DeliveryRow {
   attempts: number;
   payload_text: string | null;
   link_preview_url: string | null;
+  /** Quiet-hours deferral: NULL or a UTC datetime the row waits for. */
+  not_before: string | null;
 }
 
 /**
@@ -28,20 +30,22 @@ export function enqueueDelivery(
     payloadText: string;
     /** URL for Telegram's link preview (weekly digest → site og:image card). */
     linkPreviewUrl?: string;
+    /** Quiet-hours deferral: hold this delivery until the given UTC datetime. */
+    notBefore?: string;
   },
   conn?: Database.Database,
 ): number {
   const db = conn ?? getDb();
   const res = db
     .prepare(
-      `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text, link_preview_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text, link_preview_url, not_before)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        -- target the dedup index explicitly: a bare ON CONFLICT would
        -- silently swallow ANY future constraint violation (audit L8)
        ON CONFLICT (digest_key, target_type, target_id) WHERE digest_key IS NOT NULL
        DO NOTHING`,
     )
-    .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText, d.linkPreviewUrl ?? null);
+    .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText, d.linkPreviewUrl ?? null, d.notBefore ?? null);
   return res.changes ? Number(res.lastInsertRowid) : 0;
 }
 
@@ -60,7 +64,10 @@ export function markFailed(id: number, error: string, conn?: Database.Database):
 export function pendingDeliveries(limit = 50, conn?: Database.Database): DeliveryRow[] {
   const db = conn ?? getDb();
   return db
-    .prepare("SELECT * FROM deliveries WHERE status = 'pending' ORDER BY id LIMIT ?")
+    .prepare(
+      `SELECT * FROM deliveries WHERE status = 'pending'
+       AND (not_before IS NULL OR not_before <= datetime('now')) ORDER BY id LIMIT ?`,
+    )
     .all(limit) as DeliveryRow[];
 }
 
@@ -68,7 +75,8 @@ export function retryableDeliveries(maxAttempts = 5, limit = 50, conn?: Database
   const db = conn ?? getDb();
   return db
     .prepare(
-      "SELECT * FROM deliveries WHERE status = 'failed' AND attempts < ? ORDER BY id LIMIT ?",
+      `SELECT * FROM deliveries WHERE status = 'failed' AND attempts < ?
+       AND (not_before IS NULL OR not_before <= datetime('now')) ORDER BY id LIMIT ?`,
     )
     .all(maxAttempts, limit) as DeliveryRow[];
 }

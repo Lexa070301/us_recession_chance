@@ -29,6 +29,17 @@ export interface EpisodesArgs {
   asof: boolean;
 }
 
+/** Tap-friendly entry points — every NBER recession + the 2023–24 scare.
+ *  Labels live in locales under `episodes.preset.<key>`. */
+export const EPISODE_PRESETS: { key: string; from: number; to: number }[] = [
+  { key: "double_dip", from: 1980, to: 1982 },
+  { key: "early90s", from: 1990, to: 1991 },
+  { key: "dotcom", from: 2001, to: 2001 },
+  { key: "gfc", from: 2008, to: 2009 },
+  { key: "covid", from: 2020, to: 2020 },
+  { key: "inversion2324", from: 2023, to: 2024 },
+];
+
 /** "2008" | "2007-2009" | "2008 asof" | "2007–2009 asof" → parsed args. */
 export function parseEpisodesArgs(arg: string): EpisodesArgs | null {
   const s = arg.trim().toLowerCase();

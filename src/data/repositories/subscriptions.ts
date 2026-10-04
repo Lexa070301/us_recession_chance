@@ -38,7 +38,8 @@ export function activateSubscription(
            MAX(COALESCE(subscriptions.expires_at, datetime('now')), datetime('now')),
            ?
          ),
-         charge_id_last = excluded.charge_id_last`,
+         charge_id_last = excluded.charge_id_last,
+         expiry_reminded_at = NULL`,
     ).run(userId, `+${periodDays} days`, chargeId, `+${periodDays} days`);
     setUserPlan(userId, "plus", db);
   });
@@ -134,6 +135,34 @@ export function applyRefund(
     }
     return { expiresAt: row.expires_at };
   })();
+}
+
+export interface ExpiringSub {
+  user_id: number;
+  expires_at: string;
+}
+
+/** Active subscriptions expiring within `withinHours` that haven't been reminded. */
+export function listExpiringSubscriptions(
+  withinHours: number,
+  conn?: Database.Database,
+): ExpiringSub[] {
+  const db = conn ?? getDb();
+  return db
+    .prepare(
+      `SELECT user_id, expires_at FROM subscriptions
+       WHERE status = 'active' AND expiry_reminded_at IS NULL
+         AND expires_at > datetime('now')
+         AND expires_at <= datetime('now', ?)`,
+    )
+    .all(`+${withinHours} hours`) as ExpiringSub[];
+}
+
+export function markExpiryReminded(userId: number, conn?: Database.Database): void {
+  const db = conn ?? getDb();
+  db.prepare("UPDATE subscriptions SET expiry_reminded_at = datetime('now') WHERE user_id = ?").run(
+    userId,
+  );
 }
 
 export function getSubscription(

@@ -226,7 +226,6 @@ export const modelConfigSchema = z.object({
     free: z.object({
       delivery_mode: z.enum(["instant", "digest"]),
       custom_signals: z.boolean(),
-      min_severity_floor: z.enum(["watch", "warning", "critical"]),
     }),
     plus: z.object({
       delivery_mode: z.enum(["instant", "digest"]),

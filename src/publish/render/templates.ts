@@ -339,6 +339,32 @@ export function renderCompositeAlert(
   ].join("\n");
 }
 
+/** Plus: composite risk BAND changed — fires in both directions. */
+export function renderBucketAlert(
+  prevBucket: string,
+  composite: CompositeResult,
+  locale: string,
+): string {
+  const order = getConfig().model.composite.bands.map((b) => b.bucket);
+  const up = order.indexOf(composite.bucket) > order.indexOf(prevBucket);
+  const score = composite.score.toFixed(1);
+  const p = composite.modelProb;
+  const detail =
+    (p === null || p === undefined
+      ? t(locale, "composite.risk_score", { score, prob: composite.probLabel })
+      : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score })) +
+    nextBandSuffix(composite.score, locale);
+  return [
+    t(locale, up ? "composite.bucket_up" : "composite.bucket_down", {
+      from: t(locale, `bucket.${prevBucket}`),
+      to: t(locale, `bucket.${composite.bucket}`),
+    }),
+    detail,
+    "",
+    t(locale, "bot.disclaimer_short"),
+  ].join("\n");
+}
+
 /** Plus: per-signal detail — state, value, historical hit-rate, lead. */
 export function renderAnalytics(states: SignalStateRow[], locale: string): string {
   const lines: string[] = [t(locale, "analytics.title"), ""];

@@ -123,3 +123,26 @@ export function listActiveUsers(conn?: Database.Database): UserRow[] {
   const db = conn ?? getDb();
   return db.prepare("SELECT * FROM users WHERE is_blocked = 0").all() as UserRow[];
 }
+
+/**
+ * Quiet hours (Plus): when `now` falls inside the window, returns the UTC
+ * datetime the window ends — deliveries defer until then. Windows are
+ * [from, to) UTC hours and may wrap midnight (22→8). from===to and null
+ * mean "off". Returns null when outside the window.
+ * Datetime format matches deliveries.not_before ('YYYY-MM-DD HH:MM:SS' UTC).
+ */
+export function quietHoursUntil(
+  qh: { from: number; to: number } | null,
+  now = new Date(),
+): string | null {
+  if (!qh || qh.from === qh.to) return null;
+  const h = now.getUTCHours();
+  const inside =
+    qh.from < qh.to ? h >= qh.from && h < qh.to : h >= qh.from || h < qh.to;
+  if (!inside) return null;
+  const end = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), qh.to),
+  );
+  if (end.getTime() <= now.getTime()) end.setUTCDate(end.getUTCDate() + 1);
+  return end.toISOString().slice(0, 19).replace("T", " ");
+}

@@ -201,6 +201,19 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE deliveries ADD COLUMN link_preview_url TEXT;
     `,
   },
+  {
+    id: "0006_quiet_and_reminders",
+    sql: `
+      -- Quiet hours (Plus): non-critical alerts enqueue with not_before =
+      -- end of the user's quiet window instead of delivering instantly.
+      -- pending/retryable queries skip rows whose not_before is in the future.
+      ALTER TABLE deliveries ADD COLUMN not_before TEXT;
+
+      -- Renewal reminders: one DM ~72h before Plus expiry, cleared on each
+      -- new payment so the next cycle reminds again.
+      ALTER TABLE subscriptions ADD COLUMN expiry_reminded_at TEXT;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

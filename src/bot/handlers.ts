@@ -4,10 +4,11 @@ import { getConfig } from "../config/load.js";
 import {
   getAllSignalStates,
   getLatestComposite,
+  getLatestEvent,
   getRecentEvents,
 } from "../data/repositories/signalState.js";
 import { SEVERITY_ORDER, type SignalState } from "../data/repositories/signalState.js";
-import { getPrefs, getUser, savePrefs, setUserLocale } from "../data/repositories/users.js";
+import { getPrefs, getUser, savePrefs, setUserLocale, type UserPrefs } from "../data/repositories/users.js";
 import {
   getSubscription,
   isSubscriptionActive,
@@ -16,11 +17,12 @@ import {
 import { findTier } from "./payments.js";
 import { bucketForScore, computeComposite } from "../signals/score.js";
 import { computePooledProb } from "../signals/pooledProb.js";
-import { parseEpisodesArgs, renderEpisodes } from "./episodes.js";
+import { EPISODE_PRESETS, parseEpisodesArgs, renderEpisodes } from "./episodes.js";
 import { t } from "../publish/render/i18n.js";
 import {
   renderAnalytics,
   renderNow,
+  renderSignalEvent,
   renderStatus,
 } from "../publish/render/templates.js";
 import { digestTimeMinutes } from "../jobs/digest.js";
@@ -126,7 +128,13 @@ export async function cmdEpisodes(ctx: Context): Promise<void> {
   }
   const args = parseEpisodesArgs(String(ctx.match ?? ""));
   if (!args) {
-    await ctx.reply(t(loc, "episodes.usage"));
+    const kb = new InlineKeyboard();
+    for (const p of EPISODE_PRESETS) {
+      kb.text(t(loc, `episodes.preset.${p.key}`), `ep:${p.from}:${p.to}`).row();
+    }
+    await ctx.reply(`${t(loc, "episodes.pick")}\n\n${t(loc, "episodes.usage")}`, {
+      reply_markup: kb,
+    });
     return;
   }
   await ctx.reply(renderEpisodes(args, loc));
@@ -168,20 +176,20 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
   const loc = locale(ctx);
   const kb = new InlineKeyboard();
 
-  const deliveryLabel =
-    prefs.delivery_mode === "instant"
-      ? t(loc, "bot.delivery_instant")
-      : t(loc, "bot.delivery_digest");
-  kb.text(`${t(loc, "bot.settings_delivery")}: ${deliveryLabel}`, "set:delivery").row();
-
-  const nextSev =
-    SEVERITIES[(SEVERITIES.indexOf(prefs.min_severity) + 1) % SEVERITIES.length];
-  kb.text(
-    `${t(loc, "bot.settings_min_severity")}: ${t(loc, `severity.${prefs.min_severity}`)} → ${t(loc, `severity.${nextSev}`)}`,
-    "set:severity",
-  ).row();
-
   if (isPlus) {
+    const deliveryLabel =
+      prefs.delivery_mode === "instant"
+        ? t(loc, "bot.delivery_instant")
+        : t(loc, "bot.delivery_digest");
+    kb.text(`${t(loc, "bot.settings_delivery")}: ${deliveryLabel}`, "set:delivery").row();
+
+    const nextSev =
+      SEVERITIES[(SEVERITIES.indexOf(prefs.min_severity) + 1) % SEVERITIES.length];
+    kb.text(
+      `${t(loc, "bot.settings_min_severity")}: ${t(loc, `severity.${prefs.min_severity}`)} → ${t(loc, `severity.${nextSev}`)}`,
+      "set:severity",
+    ).row();
+
     kb.text(`${prefs.daily_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_daily_digest")}`, "set:digest_daily").row();
     kb.text(`${prefs.weekly_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_weekly_digest")}`, "set:digest_weekly").row();
     kb.text(`${prefs.nowcast_alerts ? "✅" : "⬜"} ${t(loc, "bot.settings_nowcast")}`, "set:nowcast").row();
@@ -195,7 +203,14 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
       `${t(loc, "bot.settings_digest_time")}: ${prefs.digest_time ?? getConfig().channels.defaults.digest_time_utc}`,
       "set:digest_time",
     ).row();
+    const qh = prefs.quiet_hours;
+    const qhLabel = qh
+      ? `${String(qh.from).padStart(2, "0")}:00–${String(qh.to).padStart(2, "0")}:00 UTC`
+      : t(loc, "bot.settings_score_off");
+    kb.text(`${t(loc, "bot.settings_quiet_hours")}: ${qhLabel}`, "set:quiet").row();
   } else {
+    // Free tier: delivery mode & severity floor only gate instant pushes
+    // free users never receive — show one upgrade CTA instead of dead toggles.
     kb.text(t(loc, "bot.upgrade_hint"), "set:upgrade").row();
   }
 
@@ -313,6 +328,60 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
     return;
   }
 
+  if (data === "set:quiet") {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    const prefs = getPrefs(userId);
+    // Quiet-hours presets (UTC — consistent with digest_time): cycle off →
+    // 22–08 → 23–07 → 00–08.
+    const presets: (UserPrefs["quiet_hours"])[] = [
+      null,
+      { from: 22, to: 8 },
+      { from: 23, to: 7 },
+      { from: 0, to: 8 },
+    ];
+    const cur = prefs.quiet_hours;
+    const idx = presets.findIndex((p) => p?.from === cur?.from && p?.to === cur?.to);
+    savePrefs(userId, { quiet_hours: presets[(idx + 1) % presets.length] });
+    await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_updated") });
+    await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(ctx) });
+    return;
+  }
+
+  // /episodes preset buttons — the year range arrives via callback data.
+  if (data.startsWith("ep:")) {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    const [from, to] = data.slice(3).split(":").map(Number);
+    if (!Number.isInteger(from) || !Number.isInteger(to)) return;
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(renderEpisodes({ from, to, asof: false }, loc));
+    return;
+  }
+
+  // Sample alert for free users — shows the real Plus format on real data.
+  if (data === "demo:alert") {
+    await ctx.answerCallbackQuery();
+    const banner = t(loc, "bot.demo_banner");
+    const ev = getLatestEvent();
+    if (!ev) {
+      await ctx.reply(`${banner}\n\n${t(loc, "bot.demo_none")}`);
+      return;
+    }
+    const states = getAllSignalStates();
+    const composite = computeComposite(
+      new Map(states.map((s) => [s.signal_key, s])),
+      getConfig().signals,
+    );
+    composite.modelProb = computePooledProb();
+    await ctx.reply(`${banner}\n\n${renderSignalEvent(ev, composite, loc)}`);
+    return;
+  }
+
   if (data === "set:upgrade") {
     await ctx.answerCallbackQuery();
     await cmdPlan(ctx);
@@ -360,6 +429,7 @@ export async function cmdPlan(ctx: Context): Promise<void> {
     const key = pct > 0 ? "bot.plan_tier_disc" : "bot.plan_tier";
     kb.text(t(loc, key, { days: tier.days, stars: tier.stars, pct }), `buy:plus:${tier.days}`).row();
   }
+  kb.text(t(loc, "bot.demo_button"), "demo:alert").row();
 
   await ctx.reply(t(loc, "bot.plan_desc"), { reply_markup: kb });
 }

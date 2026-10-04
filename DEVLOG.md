@@ -2,6 +2,30 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-04 (implementation pass 18: Plus features + UX fixes)
+
+Plus-tier expansion and dead-end cleanup from the paid-features review:
+
+- Quiet hours finally wired end-to-end (the pref existed since 0001 with
+  no effect): non-critical alerts enqueue with `deliveries.not_before` =
+  quiet-window end (migration 0006); pending/retryable queries skip held
+  rows. Settings row cycles UTC presets; critical events and
+  high/severe band changes still bypass.
+- Band-change alerts (Plus, both directions): `routeBucketAlert` fires on
+  prevBucket≠bucket composite transitions — "🚨 LOW → ELEVATED" and
+  "✅ risk eased ELEVATED → LOW". Goes to all Plus users; the service now
+  says "better", not only "worse".
+- Renewal reminders: `expiry_reminded_at` on subscriptions, one DM ~72h
+  before expiry from the hourly subs job, flag reset on each payment.
+- /episodes preset buttons (1980–82 … 2023–24 inversion scare) — tap
+  instead of remembering the year-range syntax; free text still works.
+- Demo alert: /plan gained a "sample alert" button rendering a real
+  recent event — free users can see the Plus format before paying.
+- Copy/config hygiene: plan_desc now lists /now, /episodes, band alerts,
+  quiet hours; digest toggles framed as "optional — instant covers it";
+  free users no longer see dead delivery/severity toggles (one upgrade
+  CTA instead); removed the never-enforced `plans.free.min_severity_floor`.
+
 ## 2026-10-04 (implementation pass 17: score context "N to NEXT_BAND")
 
 A bare "score 1.0" is meaningless without knowing the scale — now every

@@ -117,6 +117,8 @@ composite:
   nowcast: "⏱ Nowcast: {{status}}"
   nowcast_calm: "✅ спокойно"
   threshold_alert: "📊 Скор {{score}} — пересёк ваш порог {{threshold}}"
+  bucket_up: "🚨 Уровень риска: {{from}} → {{to}}"
+  bucket_down: "✅ Уровень риска снизился: {{from}} → {{to}}"
 
 audit:
   title: "🔍 Самоаудит — {{week}}"
@@ -134,6 +136,14 @@ audit:
 
 episodes:
   usage: "Формат: /episodes 2008 или /episodes 2007–2009 — добавьте 'asof' для данных на тот момент"
+  pick: "Выберите окно рецессии или отправьте годы текстом:"
+  preset:
+    double_dip: "1980–82 · Двойная рецессия"
+    early90s: "1990–91"
+    dotcom: "2001 · Дотком"
+    gfc: "2008–09 · Великая рецессия"
+    covid: "2020 · COVID"
+    inversion2324: "2023–24 · Инверсия без рецессии"
   title: "🔎 Эпизоды {{range}} ({{mode}})"
   mode_latest: "последняя ревизия данных"
   mode_asof: "данные по состоянию на тот момент (as-of)"
@@ -229,12 +239,17 @@ bot:
   delivery_digest: "Дневной дайджест"
   settings_min_severity: "Минимальная важность"
   settings_lang: "Language / Язык"
-  settings_daily_digest: "Дневной дайджест"
-  settings_weekly_digest: "Недельный дайджест"
+  settings_daily_digest: "Дневной дайджест (опционально — алерты покрывают)"
+  settings_weekly_digest: "Недельный дайджест (опционально)"
   settings_nowcast: "Nowcast-алерты"
   settings_score_alert: "Порог скора"
   settings_score_off: "выкл"
   settings_digest_time: "Время дайджеста (UTC)"
+  settings_quiet_hours: "Тихие часы"
+  plan_expiring: "⏳ Plus истекает через {{days}} дн. ({{until}}) — продлить: /plan."
+  demo_button: "👀 Пример Plus-алерта"
+  demo_banner: "Демо — так выглядит мгновенный Plus-алерт:"
+  demo_none: "Реальных событий пока не было — пример появится после первого перехода сигнала."
   digest_time_hint: "Отправьте /digest HH:MM (UTC), чтобы задать своё время — /digest off вернёт стандартное {{default}}."
   digest_time_set: "Время дайджеста: {{time}} UTC ✅"
   digest_time_reset: "Время дайджеста сброшено на стандартное ({{default}} UTC)."
@@ -261,11 +276,12 @@ bot:
   plan_title: "💎 Тариф Plus"
   plan_desc: |
     Plus включает:
-    • Мгновенные алерты переходов и nowcast (в каналах — только дайджесты)
+    • Мгновенные алерты переходов и nowcast, с тихими часами (в каналах — только дайджесты)
+    • Алерты смены уровня риска в обе стороны — «НИЗКИЙ → ПОВЫШЕННЫЙ» и обратно
     • Сигналы уровня «наблюдение» + выбор отдельных сигналов
     • Персональный порог композитного скора
-    • /analytics — статистика по каждому сигналу
-    • Своё время дайджеста; дайджесты можно отключить
+    • /now — мгновенный срез · /analytics — статистика сигналов · /episodes — исторические повторы
+    • Своё время дайджеста; дайджесты опциональны — instant-алерты их покрывают
     Выберите период:
   plan_invoice: "Подписка Plus — {{days}} дней"
   plan_tier: "💎 {{stars}} ⭐ — {{days}} дн."

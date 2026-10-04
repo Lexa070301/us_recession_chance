@@ -127,6 +127,14 @@ export function getLastEvent(
     .get(signalKey) as SignalEventRow | undefined;
 }
 
+/** Latest transition across all signals (demo alert, diagnostics). */
+export function getLatestEvent(conn?: Database.Database): SignalEventRow | undefined {
+  const db = conn ?? getDb();
+  return db
+    .prepare("SELECT * FROM signal_events ORDER BY id DESC LIMIT 1")
+    .get() as SignalEventRow | undefined;
+}
+
 export function getEventsSince(ts: string, conn?: Database.Database): SignalEventRow[] {
   const db = conn ?? getDb();
   return db.prepare("SELECT * FROM signal_events WHERE ts >= ? ORDER BY ts").all(ts) as SignalEventRow[];

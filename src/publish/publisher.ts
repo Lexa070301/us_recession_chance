@@ -10,10 +10,10 @@ import {
 } from "../data/repositories/deliveries.js";
 import type { SignalEventRow } from "../data/repositories/signalState.js";
 import { SEVERITY_ORDER } from "../data/repositories/signalState.js";
-import { getPrefs, listActiveUsers, setBlocked } from "../data/repositories/users.js";
+import { getPrefs, listActiveUsers, quietHoursUntil, setBlocked } from "../data/repositories/users.js";
 import type { CompositeResult } from "../signals/score.js";
 import { sendTelegramMessage } from "./adapters/telegram.js";
-import { renderCompositeAlert, renderSignalEvent } from "./render/templates.js";
+import { renderBucketAlert, renderCompositeAlert, renderSignalEvent } from "./render/templates.js";
 
 /**
  * Route a SignalEvent to Plus users' DMs. Channels are digest-only now —
@@ -52,9 +52,12 @@ export function routeEvent(
       (event.to_state === "ok" && SEVERITY_ORDER[event.from_state] >= floor);
     if (!relevant) continue;
 
+    // Quiet hours: defer non-critical alerts to the window end.
+    const notBefore =
+      event.to_state === "critical" ? undefined : quietHoursUntil(prefs.quiet_hours) ?? undefined;
     const text = renderSignalEvent(event, composite, user.locale);
     enqueueDelivery(
-      { eventId: event.id, targetType: "dm", targetId: String(user.tg_user_id), locale: user.locale, payloadText: text },
+      { eventId: event.id, targetType: "dm", targetId: String(user.tg_user_id), locale: user.locale, payloadText: text, notBefore },
       db,
     );
     enqueued++;
@@ -87,6 +90,45 @@ export function routeCompositeAlerts(
         targetId: String(user.tg_user_id),
         locale: user.locale,
         payloadText: renderCompositeAlert(composite, t, user.locale),
+        notBefore: quietNotBefore(prefs, composite),
+      },
+      db,
+    );
+    enqueued++;
+  }
+  return enqueued;
+}
+
+/** Quiet-hours rule for composite-level alerts: defer unless the new band is high/severe. */
+function quietNotBefore(prefs: { quiet_hours: { from: number; to: number } | null }, composite: CompositeResult): string | undefined {
+  if (composite.bucket === "high" || composite.bucket === "severe") return undefined;
+  return quietHoursUntil(prefs.quiet_hours) ?? undefined;
+}
+
+/**
+ * Plus feature: the composite risk BAND changed (e.g. low → elevated).
+ * Fires in both directions — a de-escalation is information too. Goes to
+ * all Plus users regardless of delivery_mode: band changes are the
+ * product's headline answer and arrive days/weeks apart, not noise.
+ */
+export function routeBucketAlert(
+  prevBucket: string | null,
+  composite: CompositeResult,
+  conn?: Database.Database,
+): number {
+  if (!prevBucket || prevBucket === composite.bucket) return 0;
+  const db = conn ?? getDb();
+  let enqueued = 0;
+  for (const user of listActiveUsers(db)) {
+    if (user.plan !== "plus") continue;
+    const prefs = getPrefs(user.tg_user_id, db);
+    enqueueDelivery(
+      {
+        targetType: "dm",
+        targetId: String(user.tg_user_id),
+        locale: user.locale,
+        payloadText: renderBucketAlert(prevBucket, composite, user.locale),
+        notBefore: quietNotBefore(prefs, composite),
       },
       db,
     );

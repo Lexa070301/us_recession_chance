@@ -115,6 +115,8 @@ composite:
   nowcast: "⏱ Nowcast: {{status}}"
   nowcast_calm: "✅ calm"
   threshold_alert: "📊 Score {{score}} — crossed your alert threshold {{threshold}}"
+  bucket_up: "🚨 Risk band: {{from}} → {{to}}"
+  bucket_down: "✅ Risk band eased: {{from}} → {{to}}"
 
 audit:
   title: "🔍 Self-audit — {{week}}"
@@ -132,6 +134,14 @@ audit:
 
 episodes:
   usage: "Usage: /episodes 2008 or /episodes 2007–2009 — add 'asof' for point-in-time data"
+  pick: "Pick a recession window, or send years as text:"
+  preset:
+    double_dip: "1980–82 · Double dip"
+    early90s: "1990–91"
+    dotcom: "2001 · Dot-com"
+    gfc: "2008–09 · Great Recession"
+    covid: "2020 · COVID"
+    inversion2324: "2023–24 · Inversion scare"
   title: "🔎 Episodes {{range}} ({{mode}})"
   mode_latest: "latest-revision data"
   mode_asof: "point-in-time, as-of data"
@@ -227,12 +237,17 @@ bot:
   delivery_digest: "Daily digest"
   settings_min_severity: "Minimum severity"
   settings_lang: "Language / Язык"
-  settings_daily_digest: "Daily digest"
-  settings_weekly_digest: "Weekly digest"
+  settings_daily_digest: "Daily digest (optional — alerts cover it)"
+  settings_weekly_digest: "Weekly digest (optional)"
   settings_nowcast: "Nowcast alerts"
   settings_score_alert: "Score alert"
   settings_score_off: "off"
   settings_digest_time: "Digest time (UTC)"
+  settings_quiet_hours: "Quiet hours"
+  plan_expiring: "⏳ Plus expires in {{days}}d ({{until}}) — renew anytime via /plan."
+  demo_button: "👀 Sample Plus alert"
+  demo_banner: "Demo — this is what an instant Plus alert looks like:"
+  demo_none: "No real signal events yet — a sample appears after the first transition."
   digest_time_hint: "Send /digest HH:MM (UTC) to pick your time — /digest off restores the default {{default}}."
   digest_time_set: "Digest time set to {{time}} UTC ✅"
   digest_time_reset: "Digest time reset to default ({{default}} UTC)."
@@ -259,11 +274,12 @@ bot:
   plan_title: "💎 Plus plan"
   plan_desc: |
     Plus includes:
-    • Instant transition & nowcast alerts (channels get digests only)
+    • Instant transition & nowcast alerts, with quiet hours (channels get digests only)
+    • Band-change alerts both ways — "LOW → ELEVATED" and back when risk recedes
     • Watch-level signals + custom signal selection
     • Personal composite-score alert threshold
-    • /analytics — per-signal stats on demand
-    • Custom digest time; digests can be turned off
+    • /now — instant snapshot · /analytics — per-signal stats · /episodes — historical replays
+    • Custom digest time; digests optional — instant alerts already cover them
     Choose a period:
   plan_invoice: "Plus subscription — {{days}} days"
   plan_tier: "💎 {{stars}} ⭐ — {{days}} days"

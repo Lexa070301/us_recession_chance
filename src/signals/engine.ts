@@ -31,6 +31,8 @@ export interface EngineRun {
   composite: CompositeResult;
   /** Score of the previous snapshot (null on first run) — for threshold alerts. */
   prevScore: number | null;
+  /** Bucket of the previous snapshot (null on first run) — for band-change alerts. */
+  prevBucket: string | null;
   evaluated: number;
   skipped: number;
 }
@@ -177,5 +179,5 @@ export function runEngine(conn?: Database.Database): EngineRun {
     );
   }
 
-  return { events, composite, prevScore: prev?.score ?? null, evaluated, skipped };
+  return { events, composite, prevScore: prev?.score ?? null, prevBucket: prev?.bucket ?? null, evaluated, skipped };
 }

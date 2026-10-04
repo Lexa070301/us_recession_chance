@@ -3,7 +3,7 @@ import { getConfig } from "../config/load.js";
 import { jobFetch } from "./fetch.js";
 import { jobCheckSignals } from "./checkSignals.js";
 import { jobDigest, jobDigestAuto, jobCustomDigests } from "./digest.js";
-import { jobExpireSubscriptions } from "./subscriptions.js";
+import { jobExpireSubscriptions, jobRenewalReminders } from "./subscriptions.js";
 import { jobHealthcheck } from "./health.js";
 import { jobBackup } from "./backup.js";
 import { processDeliveries } from "../publish/publisher.js";
@@ -62,8 +62,11 @@ export function startScheduler(): void {
     await processDeliveries();
   }), { timezone: tz });
 
-  // Subscription expiry — hourly
-  cron.schedule("5 * * * *", wrap("subs", jobExpireSubscriptions), { timezone: tz });
+  // Subscription expiry + renewal reminders — hourly
+  cron.schedule("5 * * * *", wrap("subs", async () => {
+    await jobRenewalReminders();
+    await jobExpireSubscriptions();
+  }), { timezone: tz });
 
   // Healthcheck — daily 06:00 (DMs admin on issues)
   cron.schedule("0 6 * * *", wrap("health", jobHealthcheck), { timezone: tz });
