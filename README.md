@@ -15,6 +15,15 @@ composite 12-month recession risk estimate, and pushes localized alerts:
 Status: early development. See `PLAN.md` for the roadmap and `DEVLOG.md` for
 progress.
 
+## License
+
+Business Source License 1.1 — see `LICENSE`. Non-commercial use is free
+(read, study, self-host your own instance); production/commercial use is
+reserved until the Change Date (2030-10-04), after which the code becomes
+Apache 2.0. Bundled assets have their own licenses: `assets/fonts/` is
+Inter under the SIL OFL (`OFL.txt` there); `web/app/vendor/` is the
+official Telegram Web App script.
+
 ## Disclaimer
 
 This project publishes informational and educational data only. It is not
