@@ -5,8 +5,10 @@ import type Database from "better-sqlite3";
 import { getConfig } from "../config/load.js";
 import { getDb } from "../data/db.js";
 import { buildDashboardData } from "./dataJson.js";
-import { indexHtml } from "./html.js";
+import { indexHtml, type SitePageOpts } from "./html.js";
 import { atomFeed } from "./feed.js";
+import { methodHtml } from "./method.js";
+import { auditPages } from "./audit.js";
 
 /**
  * GitHub Pages site (PLAN2 §2): static dashboard + Atom feeds + data.json
@@ -44,15 +46,20 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
     // index.html) and locale subpages (/ru/index.html → ../feed-ru.xml).
     const feedName = `feed-${loc}.xml`;
     const feedHref = loc === fallback ? feedName : `../${feedName}`;
-    const html = indexHtml(data, loc, { bot, feedHref });
+    const html = indexHtml(data, loc, { bot, feedHref, siteUrl, locales, fallback });
     write(`data.${loc}.json`, JSON.stringify(data, null, 2));
     write(feedName, atomFeed(loc, siteUrl, db));
+    const pageOpts: SitePageOpts = { bot, siteUrl, locales, fallback };
     if (loc === fallback) {
       write("index.html", html);
       write("data.json", JSON.stringify(data, null, 2));
       write("feed.xml", atomFeed(loc, siteUrl, db));
+      write("method/index.html", methodHtml(loc, pageOpts));
+      for (const [rel, page] of auditPages(loc, "audit", pageOpts, db)) write(rel, page);
     } else {
       write(`${loc}/index.html`, html);
+      write(`${loc}/method/index.html`, methodHtml(loc, pageOpts));
+      for (const [rel, page] of auditPages(loc, `${loc}/audit`, pageOpts, db)) write(rel, page);
     }
   }
   // artifact-deploy skips Jekyll anyway; .nojekyll keeps branch-deploys safe.

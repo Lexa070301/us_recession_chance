@@ -30,10 +30,26 @@ describe("site", () => {
     expect(data.trend[1][1]).toBeCloseTo(6.9);
   });
 
+  it("signals lists every configured signal incl. never-evaluated ones", () => {
+    const db = createTestDb();
+    const data = buildDashboardData("en", db);
+    expect(data.signals.length).toBeGreaterThan(10);
+    // fresh DB → nothing evaluated → all "none"
+    expect(data.signals.every((s) => s.state === "none")).toBe(true);
+    expect(data.signals.some((s) => s.block === "nowcast")).toBe(true);
+  });
+
   it("renderSite writes html, feeds and data.json for each locale", () => {
     const db = createTestDb();
+    db.prepare(
+      `INSERT INTO deliveries (digest_key, target_type, target_id, locale, status, payload_text, sent_at)
+       VALUES ('a:2026-W40', 'channel', '@c', 'en', 'sent', 'AUDIT week 40\nscore verdict', '2026-10-01 13:00:00')`,
+    ).run();
     const out = mkdtempSync(join(tmpdir(), "site-"));
+    const prev = process.env.SITE_URL;
+    process.env.SITE_URL = "https://example.test/site";
     const written = renderSite(out, db);
+    process.env.SITE_URL = prev;
     expect(written).toContain("index.html");
     expect(written).toContain("data.json");
     expect(written).toContain("feed-en.xml");
@@ -41,17 +57,32 @@ describe("site", () => {
     expect(written).toContain(".nojekyll");
     expect(written).toContain("ru/index.html");
     const html = readFileSync(join(out, "index.html"), "utf8");
-    expect(html).toContain("US RECESSION WATCH");
+    expect(html).toContain("US RECESSION CHANCE");
     expect(html).toContain("<html");
     expect(html).toContain('rel="alternate"');
+    expect(html).toContain('rel="canonical"');
+    expect(html).toContain('property="og:image"');
+    expect(html).toContain("application/ld+json");
+    expect(html).toContain("sig-table");
+    expect(html).toContain("<title>US Recession Chance — 12-month US recession risk: LOW</title>");
     // feed links resolve correctly from the /ru/ subpage (audit F3)
     const ruHtml = readFileSync(join(out, "ru", "index.html"), "utf8");
     expect(ruHtml).toContain("../feed-ru.xml");
+    expect(ruHtml).toContain('hreflang="en"');
     // feeds are well-formed XML with required author element (audit F10)
     const feed = readFileSync(join(out, "feed-en.xml"), "utf8");
     expect(feed).toContain("<feed");
     expect(feed).toContain("<author>");
+    expect(feed).toContain("US Recession Chance");
     expect(readdirSync(join(out, "ru"))).toContain("index.html");
+    // methodology + audit pages
+    const method = readFileSync(join(out, "method", "index.html"), "utf8");
+    expect(method).toContain("fred.stlouisfed.org/series/");
+    expect(method).toContain("Yield curve");
+    const auditIdx = readFileSync(join(out, "audit", "index.html"), "utf8");
+    expect(auditIdx).toContain("AUDIT week 40");
+    const auditWeek = readFileSync(join(out, "audit", "2026-W40", "index.html"), "utf8");
+    expect(auditWeek).toContain("score verdict");
     // Mini App sources are copied into site/app/ (PLAN2 §14)
     expect(written).toContain("app/index.html");
     const appFiles = readdirSync(join(out, "app"));

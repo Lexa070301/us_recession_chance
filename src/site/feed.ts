@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import { getConfig } from "../config/load.js";
 import { getDb } from "../data/db.js";
+import { t } from "../publish/render/i18n.js";
 
 /**
  * Atom feed (PLAN2 §3): built from sent channel digests — payload_text is
@@ -45,7 +46,7 @@ export function atomFeed(
       const body = esc(r.payload_text);
       return `  <entry>
     <title>${esc(title)}</title>
-    <id>urn:usrecessionwatch:${esc(locale)}:${esc(r.digest_key)}</id>
+    <id>urn:usrecessionchance:${esc(locale)}:${esc(r.digest_key)}</id>
     <updated>${ts}</updated>
     <link href="${esc(pageUrl)}"/>
     <content type="html">&lt;pre&gt;${body}&lt;/pre&gt;</content>
@@ -55,9 +56,9 @@ export function atomFeed(
 
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>US Recession Watch (${esc(locale)})</title>
+  <title>${esc(t(locale, "site.title"))} (${esc(locale)})</title>
   <id>${esc(siteUrl)}/feed-${esc(locale)}.xml</id>
-  <author><name>US Recession Watch</name></author>
+  <author><name>${esc(t(locale, "app.name"))}</name></author>
   <updated>${updated}</updated>
   <link href="${esc(siteUrl)}/feed-${esc(locale)}.xml" rel="self"/>
 ${entries}

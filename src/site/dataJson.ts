@@ -47,6 +47,17 @@ export const dashboardDataSchema = z.object({
       value: z.string(),
     }),
   ),
+  /** Every configured signal (state "none" = never evaluated) — powers the
+   * coverage table on the site and in the Mini App. */
+  signals: z.array(
+    z.object({
+      key: z.string(),
+      name: z.string(),
+      block: z.string(),
+      state: z.string(),
+      value: z.string(),
+    }),
+  ),
   labels: z.object({
     title: z.string(),
     subtitle: z.string(),
@@ -59,6 +70,15 @@ export const dashboardDataSchema = z.object({
     updated: z.string(),
     bot: z.string(),
     channel: z.string(),
+    description: z.string(),
+    signals_title: z.string(),
+    state_none: z.string(),
+    cta_title: z.string(),
+    /** Newline-separated CTA bullets — split in renderers. */
+    cta_items: z.string(),
+    method_link: z.string(),
+    audit_link: z.string(),
+    back: z.string(),
   }),
 });
 
@@ -91,6 +111,31 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
     .map((s) => stateEntry(s, locale));
   const nowcastEntries = nowcast.map((s) => stateEntry(s, locale));
 
+  // Full coverage table: every configured signal, whether evaluated or not.
+  // Order: non-ok first (severity desc), then ok, then unevaluated — config
+  // order is stable inside each tier.
+  const statesMap = new Map(states.map((s) => [s.signal_key, s]));
+  const signals = cfg.signals
+    .map((def) => {
+      const st = statesMap.get(def.key);
+      const unit = def.unit ?? getSeriesDef(def.input.key)?.unit;
+      return {
+        key: def.key,
+        name: t(locale, `signal.${def.key}.name`),
+        block: def.block,
+        state: st?.state ?? "none",
+        value:
+          st?.last_value === null || st?.last_value === undefined
+            ? ""
+            : formatWithUnit(st.last_value, unit, locale),
+      };
+    })
+    .sort(
+      (a, b) =>
+        (SEVERITY_ORDER[b.state as keyof typeof SEVERITY_ORDER] ?? -1) -
+        (SEVERITY_ORDER[a.state as keyof typeof SEVERITY_ORDER] ?? -1),
+    );
+
   const trend = (
     db
       .prepare(
@@ -113,6 +158,7 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
     trend,
     active,
     nowcast: nowcastEntries,
+    signals,
     labels: {
       title: t(locale, "site.title"),
       subtitle: t(locale, "site.subtitle"),
@@ -125,6 +171,14 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
       updated: t(locale, "site.updated"),
       bot: t(locale, "site.bot"),
       channel: t(locale, "site.channel"),
+      description: t(locale, "site.description"),
+      signals_title: t(locale, "site.signals_title"),
+      state_none: t(locale, "site.state_none"),
+      cta_title: t(locale, "site.cta_title"),
+      cta_items: t(locale, "site.cta_items"),
+      method_link: t(locale, "site.method_link"),
+      audit_link: t(locale, "site.audit_link"),
+      back: t(locale, "site.back"),
     },
   });
 }

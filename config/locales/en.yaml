@@ -1,5 +1,5 @@
 app:
-  name: "US Recession Watch"
+  name: "US Recession Chance"
 
 severity:
   ok: "OK"
@@ -14,13 +14,13 @@ bucket:
   severe: "SEVERE"
 
 card:
-  caption: "📊 Recession risk: {{bucket}} · score {{score}} · US Recession Watch"
+  caption: "📊 Recession risk: {{bucket}} · score {{score}} · US Recession Chance"
   nowcast_calm: "Nowcast: calm"
   nowcast_active: "Nowcast: {{names}}"
   trend_90d: "score · 90 days"
 
 site:
-  title: "US Recession Watch"
+  title: "US Recession Chance"
   subtitle: "12-month US recession risk"
   score: "score"
   model: "model"
@@ -31,6 +31,46 @@ site:
   updated: "updated"
   bot: "Bot"
   channel: "Channel"
+  description: "12-month US recession risk estimate from leading FRED indicators — composite score, model probability, all signals and nowcast. Free, transparent, self-audited."
+  signals_title: "All signals"
+  state_none: "no data"
+  cta_title: "Personal alerts in the bot"
+  cta_items: |
+    Custom score thresholds
+    Instant state-change alerts
+    Per-signal analytics & history
+    Episode search (/episodes)
+  method_link: "Methodology"
+  audit_link: "Self-audit log"
+  back: "← back"
+  disclaimer: "Informational data only — not investment advice. Historical frequencies do not guarantee future results."
+  method_title: "Methodology"
+  method_signals: "Signals"
+  method_scoring: "Composite score"
+  method_data: "Data & revisions"
+  method_rule: "Rule"
+  method_weight: "weight"
+  method_source: "Source"
+  block_financial: "Financial"
+  block_credit: "Credit"
+  block_housing: "Housing"
+  block_labor: "Labor"
+  block_composite: "Composite"
+  block_nowcast: "Nowcast"
+  method_data_text: |
+    All indicators come from FRED (St. Louis Fed) public series — each signal links to its source.
+    Recession dating follows the NBER chronology. Publication lags are modeled explicitly, and
+    ALFRED vintages keep an auditable record of what the data looked like at each point in time.
+  method_intro: |
+    Signals are evaluated against historically meaningful thresholds from FRED series.
+    A state change is an event; the composite score weights active states and maps to
+    risk buckets calibrated on 1967–2026 history. Nowcast signals detect a recession
+    that may already be underway — they confirm onset, not forecast it.
+    Data is release-aware: ALFRED vintages let us distinguish "what we knew then"
+    from "what we know now" — backtests use as-of data, not revised history.
+  audit_title: "Self-audit log"
+  audit_empty: "No audit posts yet — the first one ships with the next weekly digest."
+  audit_published: "published"
 
 state_change:
   cleared: "cleared"
@@ -128,7 +168,7 @@ analytics:
 
 bot:
   start: |
-    👋 Welcome to US Recession Watch.
+    👋 Welcome to US Recession Chance.
 
     I track leading US recession indicators (yield curve, credit spreads, labor market, housing) and alert you when they change state.
 

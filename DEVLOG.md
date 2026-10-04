@@ -2,6 +2,37 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 14: site as a landing + rebrand)
+
+Site's role clarified: public trust + discovery funnel — "what the
+monitor says now + why believe it"; paid depth (per-signal analytics,
+episode history, personalization) stays bot-only.
+
+- **Rebrand US Recession Watch → US Recession Chance** — locales
+  (app.name, card.caption, site.title, bot.start), card header now
+  data-driven via `app.name`, feed title/author/URN, telegraph +
+  reddit strings.
+- **Homepage depth** — hero untouched; below: full signals coverage
+  table (all configured signals incl. never-evaluated `state: none`,
+  severity-sorted, new `data.signals` field), "what the bot adds" CTA
+  block, footer nav (Methodology / Self-audit / RSS / bot / lang).
+- **`/method/`** — public signal catalog grouped by block
+  (name/desc/evaluator params/FRED source link), scoring table from
+  model.yaml, data & revisions section, disclaimer. Localized via
+  `site.method_*` + existing `signal.*` keys.
+- **`/audit/`** — self-audit archive: index + per-week pages rendered
+  from `deliveries` `a:*` rows; empty state until first audit ships.
+- **SEO/OG** — `<title>` with bucket, description, canonical,
+  hreflang (+x-default), og-tags, twitter card, JSON-LD `Dataset`,
+  lang toggle. Shared `pageShell` head helper.
+- **og:image** — fresh `card.png` (1200×630) rendered each
+  `npm run site`, independent of `CARD_ENABLED`.
+- **Mini App** — `d.signals` coverage panel (falls back cleanly on
+  older `data.json` without the field).
+
+Tests: 95/95, typecheck + build clean, local `npm run site` verified
+(card.png valid PNG, meta/canonical/hreflang correct on en+ru).
+
 ## 2026-10-05 (implementation pass 13: second external audit)
 
 Second audit of the PLAN2 build — 15 findings verified against code;

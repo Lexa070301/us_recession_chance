@@ -124,7 +124,7 @@ export function cardTree(d: CardData): CardNode {
           color: FAINT,
           letterSpacing: 4,
         },
-        [div({}, "US RECESSION WATCH"), div({ letterSpacing: 1 }, d.date)],
+        [div({}, t(d.locale, "app.name").toUpperCase()), div({ letterSpacing: 1 }, d.date)],
       ),
 
       // main: verdict + sparkbars

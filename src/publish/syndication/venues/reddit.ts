@@ -8,13 +8,13 @@ import {
 } from "../types.js";
 
 /**
- * Reddit (PLAN2 §3.8): own subreddit only (REDDIT_SUBREDDIT=USRecessionWatch).
+ * Reddit (PLAN2 §3.8): own subreddit only (REDDIT_SUBREDDIT=USRecessionChance).
  * Script-app password grant → oauth.reddit.com/api/submit. Always a self-post:
  * a bare link drops the whole digest body — the text carries the content and
  * the canonical URL rides at the bottom (audit M6). Weekly + self-audit.
  */
 
-const UA = "us-recession-watch/0.1 (by u/USRecessionWatch)";
+const UA = "us-recession-chance/0.1 (by u/USRecessionChance)";
 
 async function redditToken(): Promise<string> {
   const auth = Buffer.from(

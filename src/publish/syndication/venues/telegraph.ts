@@ -50,7 +50,7 @@ export const telegraphVenue: Venue = {
     const res = (await postJson("https://api.telegra.ph/createPage", {
       access_token: tokenFor(post.locale),
       title: post.title.replace(/^[^\w]*\s*/, "").slice(0, 256),
-      author_name: "US Recession Watch",
+      author_name: "US Recession Chance",
       content: toNodes(post.text),
       return_content: false,
     })) as TelegraphResponse;

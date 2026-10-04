@@ -75,6 +75,17 @@
       html += "</div>";
     }
 
+    if (d.signals && d.signals.length) {
+      html += '<div class="panel"><h2>' + esc(L.signals_title || "All signals") + "</h2>";
+      for (var g = 0; g < d.signals.length; g++) {
+        var sg = d.signals[g];
+        var sdot = STATE_DOT[sg.state] || "#475569";
+        html += '<div class="now"><span><span class="dot" style="background:' + sdot + ';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px"></span>' +
+                esc(sg.name) + '</span><span class="v">' + esc(sg.value || "—") + "</span></div>";
+      }
+      html += "</div>";
+    }
+
     html += '<div class="panel"><h2>' + esc(L.nowcast || "Nowcast") + "</h2>";
     if (d.nowcast && d.nowcast.length) {
       for (var k = 0; k < d.nowcast.length; k++) {
