@@ -2,6 +2,23 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-04 (implementation pass 19: user timezone)
+
+Time preferences moved off UTC to the user's own timezone (migration
+0007 `user_prefs.tz_offset`, minutes east of UTC):
+
+- Settings gained a Timezone row (Plus) — preset-offset picker
+  (UTC−8…UTC+10 incl. UTC+5:30) with a back button.
+- `digest_time` and `quiet_hours` are now interpreted in the user's TZ:
+  jobCustomDigests compares against `localMinutes()`, quietHoursUntil
+  evaluates the window on the shifted local clock and returns the UTC
+  deferral end.
+- `/quiet HH:MM-HH:MM` — custom quiet window (fractional hours stored,
+  e.g. 22:30–07:15), `/quiet off` disables; settings row now points at
+  the command like digest_time does.
+- All "(UTC)" mentions dropped from settings/digest copy; replies echo
+  the user's TZ ("set to 07:30 (UTC+3)").
+
 ## 2026-10-04 (implementation pass 18: Plus features + UX fixes)
 
 Plus-tier expansion and dead-end cleanup from the paid-features review:

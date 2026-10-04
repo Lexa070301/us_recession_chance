@@ -31,11 +31,18 @@ export function digestKey(kind: DigestKind, now = new Date()): string {
   return `w:${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-/** "HH:MM" → minutes since midnight UTC; null when unset/invalid. */
+/** "HH:MM" → minutes since midnight; null when unset/invalid. */
 export function digestTimeMinutes(digestTime: string | null): number | null {
   if (!digestTime) return null;
   const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(digestTime);
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+/** UTC wall-clock → user's local minutes-of-day (tz_offset east of UTC). */
+export function localMinutes(now: Date, tzOffsetMin: number): number {
+  return (
+    (((now.getUTCHours() * 60 + now.getUTCMinutes() + tzOffsetMin) % 1440) + 1440) % 1440
+  );
 }
 
 /**
@@ -209,7 +216,6 @@ export async function jobCustomDigests(): Promise<void> {
   const db = getDb();
   const cfg = getConfig();
   const now = new Date();
-  const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
   const weeklyDue = now.getUTCDay() === cfg.channels.defaults.weekly_digest_day_utc;
 
   const targets = listActiveUsers(db).filter((u) => u.plan === "plus");
@@ -217,7 +223,8 @@ export async function jobCustomDigests(): Promise<void> {
   for (const user of targets) {
     const prefs = getPrefs(user.tg_user_id, db);
     const t = digestTimeMinutes(prefs.digest_time);
-    if (t === null || nowMin < t) continue;
+    // digest_time is stored in the user's local time (tz_offset)
+    if (t === null || localMinutes(now, prefs.tz_offset) < t) continue;
     if (prefs.daily_digest) due.push({ user, kind: "daily" });
     if (weeklyDue && prefs.weekly_digest) due.push({ user, kind: "weekly" });
   }

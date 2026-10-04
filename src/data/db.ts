@@ -214,6 +214,14 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE subscriptions ADD COLUMN expiry_reminded_at TEXT;
     `,
   },
+  {
+    id: "0007_user_tz",
+    sql: `
+      -- User timezone (minutes east of UTC). digest_time and quiet_hours are
+      -- interpreted in the user's local time; 0 = UTC.
+      ALTER TABLE user_prefs ADD COLUMN tz_offset INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

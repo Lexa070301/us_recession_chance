@@ -35,6 +35,36 @@ function locale(ctx: Context): string {
 
 const SEVERITIES: Exclude<SignalState, "ok">[] = ["watch", "warning", "critical"];
 
+/** UTC+3 / UTC−5:30 / UTC — human label for a minute offset. */
+function formatTz(offsetMin: number): string {
+  if (!offsetMin) return "UTC";
+  const sign = offsetMin > 0 ? "+" : "−";
+  const abs = Math.abs(offsetMin);
+  const mm = abs % 60;
+  return `UTC${sign}${Math.floor(abs / 60)}${mm ? `:${String(mm).padStart(2, "0")}` : ""}`;
+}
+
+/** Fractional hour → "HH:MM" (quiet-hours windows). */
+const fmtHour = (h: number) =>
+  `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
+
+/** "HH:MM" UTC → "HH:MM" in the user's tz (display of the default slot). */
+function utcHhmmToLocal(hhmmUtc: string, tzOffsetMin: number): string {
+  const [h, m] = hhmmUtc.split(":").map(Number);
+  const total = (((h * 60 + m + tzOffsetMin) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** "22-8" | "22:30-07:15" → fractional-hour window; null on bad input. */
+export function parseQuietArg(arg: string): { from: number; to: number } | null {
+  const m = /^(\d{1,2})(?::([0-5]\d))?\s*[-–—]\s*(\d{1,2})(?::([0-5]\d))?$/.exec(arg.trim());
+  if (!m) return null;
+  const from = Number(m[1]) + (m[2] ? Number(m[2]) / 60 : 0);
+  const to = Number(m[3]) + (m[4] ? Number(m[4]) / 60 : 0);
+  if (from >= 24 || to >= 24 || from === to) return null;
+  return { from, to };
+}
+
 // ------------------------------------------------------------------
 // Commands
 // ------------------------------------------------------------------
@@ -140,29 +170,57 @@ export async function cmdEpisodes(ctx: Context): Promise<void> {
   await ctx.reply(renderEpisodes(args, loc));
 }
 
-/** /digest HH:MM — custom daily digest time (UTC), /digest off resets. */
+/** /digest HH:MM — custom daily digest time (user's TZ), /digest off resets. */
 export async function cmdDigest(ctx: Context): Promise<void> {
   const loc = locale(ctx);
-  const user = getUser(ctx.from!.id);
+  const userId = ctx.from!.id;
+  const user = getUser(userId);
   if (user?.plan !== "plus") {
     await ctx.reply(t(loc, "bot.settings_plus_only"));
     return;
   }
+  const tz = formatTz(getPrefs(userId).tz_offset);
   const arg = String(ctx.match ?? "").trim().toLowerCase();
   const def = getConfig().channels.defaults.digest_time_utc;
   if (arg === "off") {
-    savePrefs(ctx.from!.id, { digest_time: null });
-    await ctx.reply(t(loc, "bot.digest_time_reset", { default: def }));
+    savePrefs(userId, { digest_time: null });
+    await ctx.reply(t(loc, "bot.digest_time_reset", { default: utcHhmmToLocal(def, getPrefs(userId).tz_offset) }));
     return;
   }
   const norm = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(arg);
   if (!norm || digestTimeMinutes(arg) === null) {
-    await ctx.reply(t(loc, "bot.digest_invalid"));
+    await ctx.reply(t(loc, "bot.digest_invalid", { tz }));
     return;
   }
   const hhmm = `${norm[1].padStart(2, "0")}:${norm[2]}`;
-  savePrefs(ctx.from!.id, { digest_time: hhmm });
-  await ctx.reply(t(loc, "bot.digest_time_set", { time: hhmm }));
+  savePrefs(userId, { digest_time: hhmm });
+  await ctx.reply(t(loc, "bot.digest_time_set", { time: hhmm, tz }));
+}
+
+/** /quiet 22-8 — quiet hours in the user's TZ; /quiet off disables. */
+export async function cmdQuiet(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const userId = ctx.from!.id;
+  if (getUser(userId)?.plan !== "plus") {
+    await ctx.reply(t(loc, "bot.settings_plus_only"));
+    return;
+  }
+  const tz = formatTz(getPrefs(userId).tz_offset);
+  const arg = String(ctx.match ?? "").trim().toLowerCase();
+  if (arg === "off") {
+    savePrefs(userId, { quiet_hours: null });
+    await ctx.reply(t(loc, "bot.quiet_off_msg"));
+    return;
+  }
+  const window = parseQuietArg(arg);
+  if (!arg || !window) {
+    await ctx.reply(t(loc, "bot.quiet_invalid", { tz }));
+    return;
+  }
+  savePrefs(userId, { quiet_hours: window });
+  await ctx.reply(
+    t(loc, "bot.quiet_set", { window: `${fmtHour(window.from)}–${fmtHour(window.to)}`, tz }),
+  );
 }
 
 // ------------------------------------------------------------------
@@ -200,12 +258,16 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
         : `${th}+ · ${t(loc, `bucket.${bucketForScore(th)}`)}`;
     kb.text(`${t(loc, "bot.settings_score_alert")}: ${thLabel}`, "set:score").row();
     kb.text(
-      `${t(loc, "bot.settings_digest_time")}: ${prefs.digest_time ?? getConfig().channels.defaults.digest_time_utc}`,
+      `${t(loc, "bot.settings_timezone")}: ${formatTz(prefs.tz_offset)}`,
+      "set:tz",
+    ).row();
+    kb.text(
+      `${t(loc, "bot.settings_digest_time")}: ${prefs.digest_time ?? utcHhmmToLocal(getConfig().channels.defaults.digest_time_utc, prefs.tz_offset)}`,
       "set:digest_time",
     ).row();
     const qh = prefs.quiet_hours;
     const qhLabel = qh
-      ? `${String(qh.from).padStart(2, "0")}:00–${String(qh.to).padStart(2, "0")}:00 UTC`
+      ? `${fmtHour(qh.from)}–${fmtHour(qh.to)}`
       : t(loc, "bot.settings_score_off");
     kb.text(`${t(loc, "bot.settings_quiet_hours")}: ${qhLabel}`, "set:quiet").row();
   } else {
@@ -216,6 +278,18 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
 
   kb.text(t(loc, "bot.settings_lang"), "set:lang_menu").row();
   return kb;
+}
+
+/** Timezone picker — common UTC offsets in minutes, 4 per row + back. */
+const TZ_PRESETS = [-480, -300, -180, 0, 60, 120, 180, 240, 330, 420, 540, 600];
+
+function tzKeyboard(ctx: Context): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  TZ_PRESETS.forEach((off, i) => {
+    kb.text(formatTz(off), `set:tz:${off}`);
+    if (i % 4 === 3) kb.row();
+  });
+  return kb.row().text(t(locale(ctx), "bot.back"), "set:menu");
 }
 
 function signalsKeyboard(ctx: Context): InlineKeyboard {
@@ -323,7 +397,13 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
     }
     await ctx.answerCallbackQuery();
     await ctx.reply(
-      t(loc, "bot.digest_time_hint", { default: getConfig().channels.defaults.digest_time_utc }),
+      t(loc, "bot.digest_time_hint", {
+        default: utcHhmmToLocal(
+          getConfig().channels.defaults.digest_time_utc,
+          getPrefs(userId).tz_offset,
+        ),
+        tz: formatTz(getPrefs(userId).tz_offset),
+      }),
     );
     return;
   }
@@ -333,19 +413,36 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
       await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
       return;
     }
-    const prefs = getPrefs(userId);
-    // Quiet-hours presets (UTC — consistent with digest_time): cycle off →
-    // 22–08 → 23–07 → 00–08.
-    const presets: (UserPrefs["quiet_hours"])[] = [
-      null,
-      { from: 22, to: 8 },
-      { from: 23, to: 7 },
-      { from: 0, to: 8 },
-    ];
-    const cur = prefs.quiet_hours;
-    const idx = presets.findIndex((p) => p?.from === cur?.from && p?.to === cur?.to);
-    savePrefs(userId, { quiet_hours: presets[(idx + 1) % presets.length] });
+    await ctx.answerCallbackQuery();
+    await ctx.reply(t(loc, "bot.quiet_hint", { tz: formatTz(getPrefs(userId).tz_offset) }));
+    return;
+  }
+
+  if (data === "set:tz") {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageReplyMarkup({ reply_markup: tzKeyboard(ctx) });
+    return;
+  }
+
+  if (data.startsWith("set:tz:")) {
+    if (getUser(userId)?.plan !== "plus") {
+      await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_plus_only"), show_alert: true });
+      return;
+    }
+    const off = Number(data.slice(7));
+    if (!Number.isInteger(off) || Math.abs(off) > 14 * 60) return;
+    savePrefs(userId, { tz_offset: off });
     await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_updated") });
+    await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(ctx) });
+    return;
+  }
+
+  if (data === "set:menu") {
+    await ctx.answerCallbackQuery();
     await ctx.editMessageReplyMarkup({ reply_markup: settingsKeyboard(ctx) });
     return;
   }

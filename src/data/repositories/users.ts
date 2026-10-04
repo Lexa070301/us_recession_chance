@@ -25,6 +25,8 @@ export interface UserPrefs {
   nowcast_alerts: boolean;
   /** Plus: DM when the composite score crosses this value upward. */
   score_threshold: number | null;
+  /** Minutes east of UTC — digest_time and quiet_hours are local to this. */
+  tz_offset: number;
 }
 
 export function upsertUser(
@@ -80,6 +82,7 @@ export function getPrefs(tgUserId: number, conn?: Database.Database): UserPrefs 
         weekly_digest: number;
         nowcast_alerts: number;
         score_threshold: number | null;
+        tz_offset: number;
       }
     | undefined;
   return {
@@ -93,6 +96,7 @@ export function getPrefs(tgUserId: number, conn?: Database.Database): UserPrefs 
     weekly_digest: row?.weekly_digest !== 0,
     nowcast_alerts: row?.nowcast_alerts !== 0,
     score_threshold: row?.score_threshold ?? null,
+    tz_offset: row?.tz_offset ?? 0,
   };
 }
 
@@ -103,7 +107,7 @@ export function savePrefs(tgUserId: number, prefs: Partial<UserPrefs>, conn?: Da
   const next = { ...cur, ...prefs };
   db.prepare(
     `UPDATE user_prefs SET enabled_signals_json = ?, min_severity = ?, delivery_mode = ?, digest_time = ?, quiet_hours_json = ?,
-       daily_digest = ?, weekly_digest = ?, nowcast_alerts = ?, score_threshold = ?
+       daily_digest = ?, weekly_digest = ?, nowcast_alerts = ?, score_threshold = ?, tz_offset = ?
      WHERE user_id = ?`,
   ).run(
     next.enabled_signals ? JSON.stringify(next.enabled_signals) : null,
@@ -115,6 +119,7 @@ export function savePrefs(tgUserId: number, prefs: Partial<UserPrefs>, conn?: Da
     next.weekly_digest ? 1 : 0,
     next.nowcast_alerts ? 1 : 0,
     next.score_threshold,
+    next.tz_offset,
     tgUserId,
   );
 }
@@ -125,24 +130,31 @@ export function listActiveUsers(conn?: Database.Database): UserRow[] {
 }
 
 /**
- * Quiet hours (Plus): when `now` falls inside the window, returns the UTC
- * datetime the window ends — deliveries defer until then. Windows are
- * [from, to) UTC hours and may wrap midnight (22→8). from===to and null
- * mean "off". Returns null when outside the window.
- * Datetime format matches deliveries.not_before ('YYYY-MM-DD HH:MM:SS' UTC).
+ * Quiet hours (Plus): when `now` falls inside the window — evaluated in the
+ * user's local time (tzOffsetMin east of UTC) — returns the UTC datetime
+ * the window ends; deliveries defer until then. Windows are [from, to) in
+ * (possibly fractional) local hours and may wrap midnight (22→8, 22.5→7.25).
+ * from===to and null mean "off"; outside → null.
+ * Output format matches deliveries.not_before ('YYYY-MM-DD HH:MM:SS' UTC).
  */
 export function quietHoursUntil(
   qh: { from: number; to: number } | null,
   now = new Date(),
+  tzOffsetMin = 0,
 ): string | null {
   if (!qh || qh.from === qh.to) return null;
-  const h = now.getUTCHours();
+  // Shifted clock: UTC fields of `local` read as the user's local time.
+  const local = new Date(now.getTime() + tzOffsetMin * 60_000);
+  const hFloat = local.getUTCHours() + local.getUTCMinutes() / 60;
   const inside =
-    qh.from < qh.to ? h >= qh.from && h < qh.to : h >= qh.from || h < qh.to;
+    qh.from < qh.to ? hFloat >= qh.from && hFloat < qh.to : hFloat >= qh.from || hFloat < qh.to;
   if (!inside) return null;
-  const end = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), qh.to),
+  const endLocal = new Date(
+    Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) + qh.to * 3_600_000,
   );
-  if (end.getTime() <= now.getTime()) end.setUTCDate(end.getUTCDate() + 1);
-  return end.toISOString().slice(0, 19).replace("T", " ");
+  if (endLocal.getTime() <= local.getTime()) endLocal.setUTCDate(endLocal.getUTCDate() + 1);
+  return new Date(endLocal.getTime() - tzOffsetMin * 60_000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
 }

@@ -52,9 +52,11 @@ export function routeEvent(
       (event.to_state === "ok" && SEVERITY_ORDER[event.from_state] >= floor);
     if (!relevant) continue;
 
-    // Quiet hours: defer non-critical alerts to the window end.
+    // Quiet hours: defer non-critical alerts to the window end (user's TZ).
     const notBefore =
-      event.to_state === "critical" ? undefined : quietHoursUntil(prefs.quiet_hours) ?? undefined;
+      event.to_state === "critical"
+        ? undefined
+        : quietHoursUntil(prefs.quiet_hours, undefined, prefs.tz_offset) ?? undefined;
     const text = renderSignalEvent(event, composite, user.locale);
     enqueueDelivery(
       { eventId: event.id, targetType: "dm", targetId: String(user.tg_user_id), locale: user.locale, payloadText: text, notBefore },
@@ -100,9 +102,12 @@ export function routeCompositeAlerts(
 }
 
 /** Quiet-hours rule for composite-level alerts: defer unless the new band is high/severe. */
-function quietNotBefore(prefs: { quiet_hours: { from: number; to: number } | null }, composite: CompositeResult): string | undefined {
+function quietNotBefore(
+  prefs: { quiet_hours: { from: number; to: number } | null; tz_offset: number },
+  composite: CompositeResult,
+): string | undefined {
   if (composite.bucket === "high" || composite.bucket === "severe") return undefined;
-  return quietHoursUntil(prefs.quiet_hours) ?? undefined;
+  return quietHoursUntil(prefs.quiet_hours, undefined, prefs.tz_offset) ?? undefined;
 }
 
 /**

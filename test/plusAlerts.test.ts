@@ -14,6 +14,8 @@ import {
   upsertUser,
 } from "../src/data/repositories/users.js";
 import { routeBucketAlert, routeCompositeAlerts, routeEvent } from "../src/publish/publisher.js";
+import { localMinutes } from "../src/jobs/digest.js";
+import { parseQuietArg } from "../src/bot/handlers.js";
 import type { CompositeResult } from "../src/signals/score.js";
 
 const ev = (key: string, from: SignalState, to: SignalState): SignalEventRow => {
@@ -59,6 +61,42 @@ describe("quietHoursUntil", () => {
     expect(quietHoursUntil({ from: 22, to: 8 }, at(12))).toBeNull();
     expect(quietHoursUntil(null, at(3))).toBeNull();
     expect(quietHoursUntil({ from: 8, to: 8 }, at(3))).toBeNull();
+  });
+
+  it("evaluates the window in the user's timezone", () => {
+    // UTC+3: 20:30 UTC = 23:30 local → inside a local 22–08 window;
+    // the UTC end is 05:00 (local 08:00 next day).
+    const end = quietHoursUntil({ from: 22, to: 8 }, at(20), 180);
+    expect(end).toBe("2026-10-06 05:00:00");
+    // UTC−5: same UTC instant is 15:30 local → outside the window.
+    expect(quietHoursUntil({ from: 22, to: 8 }, at(20), -300)).toBeNull();
+  });
+
+  it("supports fractional-hour windows", () => {
+    const atMin = new Date(Date.UTC(2026, 9, 5, 22, 45));
+    expect(quietHoursUntil({ from: 22.5, to: 7.25 }, atMin)?.endsWith("07:15:00")).toBe(true);
+    expect(quietHoursUntil({ from: 22.5, to: 7.25 }, new Date(Date.UTC(2026, 9, 5, 22, 15)))).toBeNull();
+  });
+});
+
+describe("localMinutes", () => {
+  it("converts UTC wall-clock to the user's local minutes", () => {
+    const now = new Date(Date.UTC(2026, 9, 5, 13, 30));
+    expect(localMinutes(now, 0)).toBe(13 * 60 + 30);
+    expect(localMinutes(now, 180)).toBe(16 * 60 + 30);
+    expect(localMinutes(now, -300)).toBe(8 * 60 + 30);
+    expect(localMinutes(now, 720)).toBe(90); // +12h wraps the day
+  });
+});
+
+describe("parseQuietArg", () => {
+  it("parses hour and HH:MM ranges, rejects garbage", () => {
+    expect(parseQuietArg("22-8")).toEqual({ from: 22, to: 8 });
+    expect(parseQuietArg("22:30-07:15")).toEqual({ from: 22.5, to: 7.25 });
+    expect(parseQuietArg("23:00 – 07:00")).toEqual({ from: 23, to: 7 });
+    expect(parseQuietArg("garbage")).toBeNull();
+    expect(parseQuietArg("0-0")).toBeNull();
+    expect(parseQuietArg("25-8")).toBeNull();
   });
 });
 
