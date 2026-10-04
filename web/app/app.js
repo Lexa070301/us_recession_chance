@@ -48,7 +48,8 @@
             esc(String(d.bucket).toUpperCase()) + "</div>";
     html += '<div class="prob">' + esc(L.score || "Score") + " <b>" +
             (d.score != null ? Number(d.score).toFixed(1) : "—") + "</b>" +
-            (d.model_prob_label ? " · " + esc(d.model_prob_label) : "") + "</div>";
+            (d.model_prob_label ? " · " + esc(d.model_prob_label) : "") +
+            (d.score_next ? " · " + esc(d.score_next) : "") + "</div>";
 
     var trend = d.trend || [];
     if (trend.length) {

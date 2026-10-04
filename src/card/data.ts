@@ -6,7 +6,7 @@ import {
   SEVERITY_ORDER,
   type SignalStateRow,
 } from "../data/repositories/signalState.js";
-import { computeComposite } from "../signals/score.js";
+import { computeComposite, nextBand } from "../signals/score.js";
 import { computePooledProb, probBucketLabel } from "../signals/pooledProb.js";
 import { t } from "../publish/render/i18n.js";
 import { formatWithUnit, splitByBlock } from "../publish/render/templates.js";
@@ -23,6 +23,8 @@ export interface CardData {
   bucket: string;
   bucketLabel: string;
   score: string;
+  /** "4.0 to ELEVATED" — next-band context; null when already top band. */
+  scoreNext: string | null;
   modelProbLabel: string | null;
   /** Composite scores over the last ~90 days, oldest → newest. */
   trend: number[];
@@ -99,6 +101,13 @@ export function collectCardData(locale: string, conn?: Database.Database): CardD
     });
 
   const score = composite.score.toFixed(1);
+  const next = nextBand(composite.score);
+  const scoreNext = next
+    ? t(locale, "composite.to_next", {
+        missing: next.missing.toFixed(1),
+        bucket: t(locale, `bucket.${next.bucket}`),
+      })
+    : null;
   const modelProbLabel =
     composite.modelProb === null || composite.modelProb === undefined
       ? null
@@ -112,6 +121,7 @@ export function collectCardData(locale: string, conn?: Database.Database): CardD
     bucket: composite.bucket,
     bucketLabel,
     score,
+    scoreNext,
     modelProbLabel,
     trend: trendScores(90, db),
     active,

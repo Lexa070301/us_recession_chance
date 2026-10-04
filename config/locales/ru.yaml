@@ -104,6 +104,7 @@ composite:
   headline: "📊 Риск рецессии: {{bucket}}"
   risk_model: "Модель: {{prob}} за 12 мес · скор {{score}}"
   risk_score: "Скор {{score}} ({{prob}})"
+  to_next: "ещё {{missing}} до уровня {{bucket}}"
   event_risk: "Риск: {{bucket}} · модель {{prob}} · скор {{score}}"
   event_risk_nomodel: "Риск: {{bucket}} · скор {{score}}"
   alert_risk: "{{bucket}} · модель {{prob}} · {{active}}"

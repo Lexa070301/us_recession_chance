@@ -189,9 +189,11 @@ export function indexHtml(
   opts: SitePageOpts,
 ): string {
   const L = d.labels;
-  const modelLine = d.model_prob_label
-    ? `${esc(d.model_prob_label)} · ${esc(L.score)} ${d.score.toFixed(1)}`
-    : `${esc(L.score)} ${d.score.toFixed(1)}`;
+  const modelLine =
+    (d.model_prob_label
+      ? `${esc(d.model_prob_label)} · ${esc(L.score)} ${d.score.toFixed(1)}`
+      : `${esc(L.score)} ${d.score.toFixed(1)}`) +
+    (d.score_next ? ` · ${esc(d.score_next)}` : "");
   const nowcastLine = d.nowcast.length
     ? d.nowcast.map((n) => `${esc(n.name)} ${esc(n.value)}`).join(" · ")
     : esc(L.nowcast_calm);

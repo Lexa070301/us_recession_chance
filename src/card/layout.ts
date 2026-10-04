@@ -86,9 +86,9 @@ function activeChip(a: CardData["active"][number]): CardNode {
 export function cardTree(d: CardData): CardNode {
   const accent = BUCKET_COLORS[d.bucket] ?? DIM;
   const modelLine =
-    d.modelProbLabel === null
+    (d.modelProbLabel === null
       ? `score ${d.score}`
-      : `${d.modelProbLabel} · score ${d.score}`;
+      : `${d.modelProbLabel} · score ${d.score}`) + (d.scoreNext ? ` · ${d.scoreNext}` : "");
 
   const activeRow =
     d.active.length > 0

@@ -2,6 +2,22 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-04 (implementation pass 17: score context "N to NEXT_BAND")
+
+A bare "score 1.0" is meaningless without knowing the scale — now every
+surface appends the distance to the next risk band: "score 1.0 · 4.0 to
+ELEVATED". Null when already in the top band.
+
+- `nextBand(score)` in score.ts + localized `composite.to_next`
+  (en "4.0 to ELEVATED" / ru "ещё 4.0 до уровня ПОВЫШЕННЫЙ").
+- Applied to: daily digest + /status + /now (`modelScoreLines`), weekly
+  dashboard, PNG card (`CardData.scoreNext`), site (`data.score_next`),
+  Mini App (app.js reads the same field).
+- Also fixed /paysupport silence: empty payments list serialized
+  inline_keyboard as `[[]]` which Telegram rejects — reply_markup is
+  only attached when buttons exist, and bot.catch now surfaces handler
+  failures to the user instead of logging-only.
+
 ## 2026-10-04 (implementation pass 16: event-gated daily syndication)
 
 External venues now receive the daily digest — but only on days with

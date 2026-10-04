@@ -33,6 +33,19 @@ export function computeComposite(
   return { score, bucket: band.bucket, probLabel: band.prob_label, detail };
 }
 
+/**
+ * The risk band directly above `score` — powers "4.0 to ELEVATED" context
+ * so a bare score carries its own scale. Null when already in the top band.
+ */
+export function nextBand(score: number): { bucket: string; missing: number } | null {
+  const bands = getConfig().model.composite.bands;
+  let idx = bands.findIndex((b) => score >= b.min && score <= b.max);
+  if (idx === -1) idx = 0;
+  const next = bands[idx + 1];
+  if (!next) return null;
+  return { bucket: next.bucket, missing: Math.round((next.min - score) * 10) / 10 };
+}
+
 /** Bucket key for an arbitrary score — reused by the settings threshold UI. */
 export function bucketForScore(score: number): string {
   if (!Number.isFinite(score)) return "low"; // explicit, not via the bands[0] fallback

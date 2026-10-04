@@ -103,6 +103,7 @@ composite:
   headline: "📊 Recession risk: {{bucket}}"
   risk_model: "Model: {{prob}} in 12m · score {{score}}"
   risk_score: "Score {{score}} ({{prob}})"
+  to_next: "{{missing}} to {{bucket}}"
   event_risk: "Risk: {{bucket}} · model {{prob}} · score {{score}}"
   event_risk_nomodel: "Risk: {{bucket}} · score {{score}}"
   alert_risk: "{{bucket}} · model {{prob}} · {{active}}"

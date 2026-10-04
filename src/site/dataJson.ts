@@ -7,7 +7,7 @@ import {
   SEVERITY_ORDER,
   type SignalStateRow,
 } from "../data/repositories/signalState.js";
-import { computeComposite, scoreScaleMax } from "../signals/score.js";
+import { computeComposite, nextBand, scoreScaleMax } from "../signals/score.js";
 import { computePooledProb, probBucketLabel } from "../signals/pooledProb.js";
 import { t } from "../publish/render/i18n.js";
 import { formatWithUnit, splitByBlock } from "../publish/render/templates.js";
@@ -29,6 +29,8 @@ export const dashboardDataSchema = z.object({
   prob_label: z.string(),
   model_prob: z.number().nullable(),
   model_prob_label: z.string().nullable(),
+  /** Localized "4.0 to ELEVATED" — next-band context; null at top band. */
+  score_next: z.string().nullable(),
   /** [ts, score] pairs — timestamps let clients align the axis (PLAN2 §14). */
   trend: z.array(z.tuple([z.string(), z.number()])),
   active: z.array(
@@ -146,6 +148,7 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
   ).map((r): [string, number] => [r.ts, r.score]);
 
   const p = composite.modelProb;
+  const next = nextBand(composite.score);
   return dashboardDataSchema.parse({
     generated_at: new Date().toISOString(),
     score: composite.score,
@@ -155,6 +158,12 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
     prob_label: composite.probLabel,
     model_prob: p ?? null,
     model_prob_label: p === null || p === undefined ? null : probBucketLabel(p),
+    score_next: next
+      ? t(locale, "composite.to_next", {
+          missing: next.missing.toFixed(1),
+          bucket: t(locale, `bucket.${next.bucket}`),
+        })
+      : null,
     trend,
     active,
     nowcast: nowcastEntries,

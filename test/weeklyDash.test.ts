@@ -1,8 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { sparkline, deltaLabel, renderWeeklyDashboard } from "../src/publish/render/templates.js";
+import { nextBand } from "../src/signals/score.js";
 import type { CompositeResult } from "../src/signals/score.js";
 
 process.env.FRED_API_KEY ??= "test-key";
+
+describe("nextBand", () => {
+  it("reports the band above with its gap; null at the top band", () => {
+    expect(nextBand(1)).toEqual({ bucket: "elevated", missing: 4 });
+    expect(nextBand(6.5)).toEqual({ bucket: "high", missing: 2.5 });
+    expect(nextBand(13)).toBeNull(); // severe — nothing above
+  });
+});
 
 describe("sparkline", () => {
   it("renders one char per point", () => {
@@ -40,6 +49,7 @@ describe("renderWeeklyDashboard", () => {
     );
     expect(text).toContain("Weekly dashboard");
     expect(text).toContain("ELEVATED");
+    expect(text).toContain("2.5 to HIGH"); // next-band context (score 6.5 → high at 9)
     expect(text).toContain("▲ +1.5");
     expect(text).toMatch(/[▁-▇]/);
     expect(text).toContain("telegra.ph/x");

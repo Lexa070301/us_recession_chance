@@ -6,7 +6,7 @@ import type {
   SignalStateRow,
 } from "../../data/repositories/signalState.js";
 import type { CompositeResult } from "../../signals/score.js";
-import { scoreScaleMax } from "../../signals/score.js";
+import { nextBand, scoreScaleMax } from "../../signals/score.js";
 import { probBucketLabel } from "../../signals/pooledProb.js";
 import { t } from "./i18n.js";
 
@@ -84,14 +84,25 @@ function headline(composite: CompositeResult, locale: string): string {
   return t(locale, "composite.headline", { bucket: t(locale, `bucket.${composite.bucket}`) });
 }
 
+/** " · 4.0 to ELEVATED" — gives the bare score its own scale. */
+export function nextBandSuffix(score: number, locale: string): string {
+  const next = nextBand(score);
+  if (!next) return "";
+  return ` · ${t(locale, "composite.to_next", {
+    missing: next.missing.toFixed(1),
+    bucket: t(locale, `bucket.${next.bucket}`),
+  })}`;
+}
+
 /** "Модель: <10% за 12 мес · скор 1.0" (+ divergence note on next line). */
 function modelScoreLines(composite: CompositeResult, locale: string): string[] {
   const score = composite.score.toFixed(1);
   const p = composite.modelProb;
   const lines = [
-    p === null || p === undefined
+    (p === null || p === undefined
       ? t(locale, "composite.risk_score", { score, prob: composite.probLabel })
-      : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score }),
+      : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score })) +
+      nextBandSuffix(composite.score, locale),
   ];
   if (p !== null && p !== undefined) {
     if (composite.bucket === "low" && p >= 0.25) {
@@ -444,6 +455,7 @@ export function renderWeeklyDashboard(
     (p === null || p === undefined
       ? t(locale, "composite.risk_score", { score, prob: composite.probLabel })
       : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score })) +
+      nextBandSuffix(composite.score, locale) +
       (delta ? ` ${delta}` : ""),
   );
 
