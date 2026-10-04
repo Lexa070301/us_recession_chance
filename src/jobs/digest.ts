@@ -38,6 +38,16 @@ export function digestTimeMinutes(digestTime: string | null): number | null {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
 
+/**
+ * Daily syndication is event-gated: a quiet-day digest ("score unchanged,
+ * no events") is noise on external venues — only days with signal
+ * transitions go out. Weekly always syndicates; self-audit runs through
+ * its own job and is not gated here.
+ */
+export function shouldSyndicate(kind: DigestKind, eventCount: number): boolean {
+  return kind !== "daily" || eventCount > 0;
+}
+
 function buildDigestPayload(kind: DigestKind) {
   const db = getDb();
   const cfg = getConfig();
@@ -177,7 +187,7 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
   // External venues (PLAN2 §3): SYNDICATION_ENABLED is set only in the GHA
   // publishing environment — the server lacks the secrets, so even a bug
   // can't double-post. Per-venue failures are isolated and fail-open.
-  if (process.env.SYNDICATION_ENABLED === "true") {
+  if (process.env.SYNDICATION_ENABLED === "true" && shouldSyndicate(kind, events.length)) {
     const posts = [...channelTexts.entries()].map(([loc, text]) => ({
       key,
       kind,

@@ -2,7 +2,23 @@
 
 Chronological development log. Newest entries at the top.
 
-## 2026-10-05 (implementation pass 15: weekly digest → single post w/ link preview)
+## 2026-10-04 (implementation pass 16: event-gated daily syndication)
+
+External venues now receive the daily digest — but only on days with
+actual signal transitions. A quiet-day post ("score unchanged, no
+events") is noise on X/LinkedIn/Reddit; event days are the genuinely
+newsworthy ones. Gate lives in `shouldSyndicate(kind, eventCount)` at
+the digest level, not per-venue.
+
+- All six venues' `kinds` now include `"daily"` (Discord already did);
+  `jobDigest` skips syndication for daily digests with zero events.
+- Telegraph daily pages are archive-only — the daily digest has no
+  read-more link, but the page still gets indexed and stored in
+  `syndications.url`.
+- Coverage: `shouldSyndicate` unit test + every built-in venue accepts
+  `daily` (regression guard for future venues).
+
+## 2026-10-04 (implementation pass 15: weekly digest → single post w/ link preview)
 
 Telegram caption limit (1024) forced the photo + text two-message flow.
 `sendMessage` supports `link_preview_options` — a text post (≤4096) can

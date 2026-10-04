@@ -12,7 +12,8 @@ import { alreadySyndicated, markSyndicated } from "../repo.js";
 /**
  * Buffer (PLAN2 §3.6): one venue multiplexing X + Threads + LinkedIn via the
  * new GraphQL API (legacy REST API sunsets 2027-02-01). Free tier: 3 channels,
- * 250 req/24h — we make at most 3 calls per digest. Weekly + self-audit only.
+ * 250 req/24h — we make at most 3 calls per digest. Daily is event-gated
+ * upstream (digest.ts); weekly + self-audit always.
  *
  * Channel IDs come from the Buffer dashboard (env per network).
  * `createPost` requires `mode` (ShareMode) + `needsApproval` and returns a
@@ -82,7 +83,7 @@ async function createPost(apiKey: string, channelId: string, text: string): Prom
 
 export const bufferVenue: Venue = {
   key: "buffer",
-  kinds: ["weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit"],
   enabled() {
     return !!(process.env.BUFFER_API_KEY && channels().length);
   },

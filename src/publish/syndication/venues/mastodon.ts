@@ -9,14 +9,14 @@ import {
 
 /**
  * Mastodon (PLAN2 §3.5): POST {instance}/api/v1/statuses, Bearer token,
- * ~500 chars. Weekly + self-audit only.
+ * ~500 chars. Daily (event-gated in digest.ts) + weekly + self-audit.
  */
 
 const LIMIT = 500;
 
 export const mastodonVenue: Venue = {
   key: "mastodon",
-  kinds: ["weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit"],
   enabled() {
     return !!(process.env.MASTODON_INSTANCE && process.env.MASTODON_TOKEN);
   },

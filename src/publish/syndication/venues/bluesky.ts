@@ -9,7 +9,8 @@ import {
 
 /**
  * Bluesky (PLAN2 §3.5): AT Protocol — createSession then createRecord.
- * Weekly + self-audit only; ≤300 chars with link facets.
+ * Daily (event-gated in digest.ts) + weekly + self-audit; ≤300 chars
+ * with link facets.
  */
 
 const LIMIT = 300;
@@ -42,7 +43,7 @@ function linkFacets(text: string): unknown[] {
 
 export const blueskyVenue: Venue = {
   key: "bluesky",
-  kinds: ["weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit"],
   enabled() {
     return !!(process.env.BSKY_HANDLE && process.env.BSKY_APP_PASSWORD);
   },

@@ -4,6 +4,7 @@ import { syndicatePosts, venues } from "../src/publish/syndication/index.js";
 import { alreadySyndicated, markSyndicated } from "../src/publish/syndication/repo.js";
 import { clip } from "../src/publish/syndication/types.js";
 import type { ExternalPost, Venue } from "../src/publish/syndication/types.js";
+import { shouldSyndicate } from "../src/jobs/digest.js";
 
 process.env.FRED_API_KEY ??= "test-key";
 
@@ -84,6 +85,20 @@ describe("syndication", () => {
     expect(off.publish).not.toHaveBeenCalled();
     expect(ruOnly.publish).not.toHaveBeenCalled();
     expect(dailyOnly.publish).not.toHaveBeenCalled();
+  });
+
+  it("all built-in venues accept event-gated daily posts", () => {
+    for (const v of venues) {
+      expect(v.kinds, v.key).toContain("daily");
+    }
+  });
+});
+
+describe("shouldSyndicate", () => {
+  it("gates daily on events; weekly/self-audit always pass", () => {
+    expect(shouldSyndicate("daily", 0)).toBe(false);
+    expect(shouldSyndicate("daily", 2)).toBe(true);
+    expect(shouldSyndicate("weekly", 0)).toBe(true);
   });
 });
 

@@ -2,7 +2,8 @@ import { postJson, type ExternalPost, type PublishResult, type Venue } from "../
 
 /**
  * Telegraph (PLAN2 §3.4): one page per locale — TELEGRAPH_TOKEN_EN / _RU.
- * The page URL is stored in syndications.url and reused as "read more".
+ * The page URL is stored in syndications.url and reused as "read more"
+ * (weekly only — daily pages are link-less archive entries).
  */
 
 interface TelegraphResponse {
@@ -39,7 +40,7 @@ function toNodes(text: string): unknown[] {
 
 export const telegraphVenue: Venue = {
   key: "telegraph",
-  kinds: ["weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit"],
   enabled() {
     return !!(process.env.TELEGRAPH_TOKEN_EN || process.env.TELEGRAPH_TOKEN_RU);
   },
