@@ -57,6 +57,7 @@ npm run dev            # MODE=all: bot + scheduler
 | `npm run card -- [--ru] [--out]` | Render the weekly PNG card (satori + resvg)                                    |
 | `npm run site`                   | Render the GitHub Pages bundle into `site/` (html, data.json, feeds, app/)     |
 | `npm run menu-button`            | Install the Mini App menu button (needs `SITE_URL`)                            |
+| `npm run commands`               | Sync the "/" autocomplete menu (localized, idempotent)                         |
 | `npm run backup`                 | Online SQLite backup to `data/backups/`                                        |
 | `npm run health`                 | One-off healthcheck report                                                     |
 
@@ -149,3 +150,5 @@ double (each environment has its own SQLite, so dedup can't catch it).
   replays all signals, classifies episodes vs NBER, posts the report.
 - **Mini App** — `/dashboard` opens `SITE_URL/app/`; run
   `npm run menu-button` once to put it on the chat menu button.
+- **Command menu** — `npm run commands` syncs the "/" autocomplete with
+  `src/bot/commands.ts` (localized); re-run after adding commands.
