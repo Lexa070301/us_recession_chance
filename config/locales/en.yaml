@@ -200,6 +200,18 @@ bot:
   dashboard_text: "📊 Live dashboard — score, trend and nowcast:"
   dashboard_button: "Open dashboard"
   dashboard_unavailable: "Dashboard is not configured yet."
+  cmd:
+    status: "Current composite risk and active signals"
+    guide: "How the signals and scoring work"
+    signals: "Choose which signals alert you"
+    analytics: "Per-signal history and stats (Plus)"
+    now: "Instant risk snapshot (Plus)"
+    episodes: "Historical signal episodes (Plus)"
+    dashboard: "Open the live dashboard"
+    settings: "Notifications, language, thresholds"
+    plan: "Your plan and Plus options"
+    terms: "Terms and disclaimer"
+    paysupport: "Payment support"
   signals_title: "📡 Signals (tap to toggle)"
   plan_title: "💎 Plus plan"
   plan_desc: |

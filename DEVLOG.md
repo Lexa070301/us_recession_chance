@@ -2,6 +2,19 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 12: going public + bot command menu)
+
+- **BSL-1.1 LICENSE** — source stays readable and self-hostable
+  (Additional Use Grant = personal non-commercial use); commercial
+  deployment reserved until Change Date 2030-10-04, then Apache 2.0.
+  `assets/fonts/OFL.txt` for bundled Inter; README License section.
+- **Pre-public sweep**: `.env` never committed, no tokens/keys in git
+  history — safe to flip repo visibility.
+- **`npm run commands`** (`src/cli/setCommands.ts`) — syncs Telegram's
+  "/" autocomplete via `setMyCommands` per supported locale; command list
+  lives in `src/bot/commands.ts`, descriptions in `bot.cmd.*` locale keys.
+  No more manual BotFather editing.
+
 ## 2026-10-05 (implementation pass 11: external audit fixes)
 
 Independent audit verified ~20 findings against code. Root cause of the
