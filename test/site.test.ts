@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createTestDb } from "../src/data/db.js";
+import { insertCompositeSnapshot } from "../src/data/repositories/signalState.js";
 import { renderSite } from "../src/site/render.js";
 import { buildDashboardData, dashboardDataSchema } from "../src/site/dataJson.js";
 
@@ -15,6 +16,18 @@ describe("site", () => {
     expect(() => dashboardDataSchema.parse(data)).not.toThrow();
     expect(data.bucket).toBe("low");
     expect(data.labels.title).toBeTruthy();
+  });
+
+  it("trend carries [ts, score] pairs from composite_snapshots (regression)", () => {
+    const db = createTestDb();
+    insertCompositeSnapshot(6.4, "moderate", "p", {}, db);
+    insertCompositeSnapshot(6.9, "moderate", "p", {}, db);
+    const data = buildDashboardData("en", db);
+    expect(data.trend).toHaveLength(2);
+    expect(Array.isArray(data.trend[0])).toBe(true);
+    expect(data.trend[0]).toHaveLength(2);
+    expect(typeof data.trend[1][1]).toBe("number");
+    expect(data.trend[1][1]).toBeCloseTo(6.9);
   });
 
   it("renderSite writes html, feeds and data.json for each locale", () => {

@@ -91,12 +91,14 @@ export function buildDashboardData(locale: string, conn?: Database.Database): Da
     .map((s) => stateEntry(s, locale));
   const nowcastEntries = nowcast.map((s) => stateEntry(s, locale));
 
-  const trend = db
-    .prepare(
-      `SELECT ts, score FROM composite_snapshots
-       WHERE ts >= datetime('now', '-90 days') ORDER BY ts`,
-    )
-    .all() as [string, number][];
+  const trend = (
+    db
+      .prepare(
+        `SELECT ts, score FROM composite_snapshots
+         WHERE ts >= datetime('now', '-90 days') ORDER BY ts`,
+      )
+      .all() as { ts: string; score: number }[]
+  ).map((r): [string, number] => [r.ts, r.score]);
 
   const p = composite.modelProb;
   return dashboardDataSchema.parse({
