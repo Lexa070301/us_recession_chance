@@ -1,6 +1,6 @@
 node_modules/
 dist/
-site/
+/site/
 card-*.png
 
 # Environment & secrets

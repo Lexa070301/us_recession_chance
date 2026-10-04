@@ -2,9 +2,9 @@ import type Database from "better-sqlite3";
 import { getDb } from "../db.js";
 
 /**
- * signal_episodes — append-only replay cache for the self-audit (PLAN2 §6).
- * Pending episodes get re-evaluated weekly and flip to hit/fp once the
- * outcome window closes (INSERT OR REPLACE keeps the row current).
+ * signal_episodes — replay cache for the self-audit (PLAN2 §6). Upserted
+ * by (signal_key, start): pending episodes get re-evaluated weekly and
+ * flip to hit/fp once the outcome window closes.
  */
 export interface EpisodeRow {
   signal_key: string;

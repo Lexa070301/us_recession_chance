@@ -308,7 +308,9 @@ export function evaluate(
       return {
         state,
         value: count,
-        since: state === "ok" ? null : lastDate,
+        // Episode continuity: keep the stored episode start while the
+        // signal stays non-ok — lastDate alone is just the newest obs.
+        since: state === "ok" ? null : (prev && prev.state !== "ok" && prev.since ? prev.since : lastDate),
         context: {
           count,
           total: ev.params.keys.length,

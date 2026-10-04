@@ -12,9 +12,10 @@ import {
  * new GraphQL API (legacy REST API sunsets 2027-02-01). Free tier: 3 channels,
  * 250 req/24h — we make at most 3 calls per digest. Weekly + self-audit only.
  *
- * Channel IDs come from the Buffer dashboard (env per network). Field names
- * verified against the GraphQL schema at implementation time — adjust
- * `CreatePostInput` if the API has since renamed them.
+ * Channel IDs come from the Buffer dashboard (env per network).
+ * `createPost` requires `mode` (ShareMode) + `needsApproval` and returns a
+ * union — MutationError must be checked or silent failures get marked as
+ * published (audit H1).
  */
 
 const ENDPOINT = "https://api.buffer.com";
@@ -36,19 +37,45 @@ function channels(): { network: string; id: string; limit: number }[] {
     .map(([network, id]) => ({ network, id, limit: CHANNEL_LIMITS[network] }));
 }
 
+interface CreatePostResponse {
+  data?: {
+    createPost?:
+      | { __typename: "PostActionSuccess"; post?: { id: string } }
+      | { __typename: "MutationError"; message?: string };
+  };
+  errors?: { message: string }[];
+}
+
 async function createPost(apiKey: string, channelId: string, text: string): Promise<string | undefined> {
   const res = (await postJson(
     ENDPOINT,
     {
       query: `mutation CreatePost($input: CreatePostInput!) {
-        createPost(input: $input) { id }
+        createPost(input: $input) {
+          __typename
+          ... on PostActionSuccess { post { id } }
+          ... on MutationError { message }
+        }
       }`,
-      variables: { input: { channelId, text, schedulingType: "automatic" } },
+      variables: {
+        input: {
+          channelId,
+          text,
+          schedulingType: "automatic",
+          mode: "shareNow",
+          needsApproval: false,
+        },
+      },
     },
     { authorization: `Bearer ${apiKey}` },
-  )) as { data?: { createPost?: { id?: string } }; errors?: { message: string }[] };
+  )) as CreatePostResponse;
   if (res.errors?.length) throw new Error(`buffer: ${res.errors[0].message}`);
-  return res.data?.createPost?.id;
+  const out = res.data?.createPost;
+  if (!out) throw new Error("buffer: empty createPost result");
+  if (out.__typename === "MutationError") {
+    throw new Error(`buffer: ${out.message ?? "MutationError"}`);
+  }
+  return out.post?.id;
 }
 
 export const bufferVenue: Venue = {

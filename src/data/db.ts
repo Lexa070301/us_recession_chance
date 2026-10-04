@@ -178,8 +178,9 @@ const MIGRATIONS: Migration[] = [
         PRIMARY KEY (digest_key, target_id)
       ) WITHOUT ROWID;
 
-      -- Cached replay episodes for the self-audit job (PLAN2 §6):
-      -- append-only; outcome filled once the 12m window resolves.
+      -- Cached replay episodes for the self-audit job (PLAN2 §6): upserted
+      -- by (signal_key, start) — pending rows are re-evaluated until the
+      -- 12m outcome window resolves, then frozen.
       CREATE TABLE IF NOT EXISTS signal_episodes (
         signal_key TEXT NOT NULL,
         start TEXT NOT NULL,

@@ -49,11 +49,23 @@ function overlaps(ep: Episode, from: string, to: string): boolean {
   return s <= to && e >= from;
 }
 
-// Rendered answers are stable for a day — replaying ~20 signals is seconds,
-// but episodes of closed years literally cannot change until new data lands.
+// Rendered answers are stable for a day — replaying ~20 signals is seconds
+// (asof sahm_states replays 51 series — heavier), but closed-year episodes
+// cannot change until new data lands. Cache is bounded: keys accumulate
+// otherwise (audit H3).
 const cache = new Map<string, { text: string; at: number }>();
 const TTL_MS = 24 * 3600 * 1000;
+const CACHE_MAX = 64;
 export const _episodesCache = cache; // exposed for tests
+
+function cacheSet(key: string, text: string): void {
+  if (cache.size >= CACHE_MAX) {
+    // Map preserves insertion order — evict the oldest entry.
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, { text, at: Date.now() });
+}
 
 export function renderEpisodes(
   args: EpisodesArgs,
@@ -76,6 +88,9 @@ export function renderEpisodes(
     (r) => r.end >= fromMonth && r.start <= toMonth,
   );
 
+  // Replay each signal ONCE — the NBER catch loop below reuses these
+  // episodes; re-replaying per recession was O(recessions × signals) (H3).
+  const episodesBySignal = new Map<string, Episode[]>();
   interface SignalHit {
     key: string;
     peak: SignalState;
@@ -84,16 +99,16 @@ export function renderEpisodes(
   }
   const hits: SignalHit[] = [];
   for (const sig of cfg.signals) {
-    const eps = detectEpisodes(source.replay(sig)).filter((ep) =>
-      overlaps(ep, fromMonth, toMonth),
-    );
-    if (!eps.length) continue;
+    const eps = detectEpisodes(source.replay(sig));
+    episodesBySignal.set(sig.key, eps);
+    const inWindow = eps.filter((ep) => overlaps(ep, fromMonth, toMonth));
+    if (!inWindow.length) continue;
     const name = t(locale, `signal.${sig.key}.name`);
     hits.push({
       key: sig.key,
-      episodes: eps.length,
-      peak: eps.reduce((a, b) => (SEVERITY_ORDER[b.peak] > SEVERITY_ORDER[a.peak] ? b : a)).peak,
-      lines: eps.map(
+      episodes: inWindow.length,
+      peak: inWindow.reduce((a, b) => (SEVERITY_ORDER[b.peak] > SEVERITY_ORDER[a.peak] ? b : a)).peak,
+      lines: inWindow.map(
         (ep) =>
           `  · ${name}: ${ep.start.slice(0, 7)} → ${ep.end ? ep.end.slice(0, 7) : "…"} (${t(locale, `severity.${ep.peak}`)})`,
       ),
@@ -113,7 +128,7 @@ export function renderEpisodes(
   for (const r of recessions) {
     const caught = cfg.signals.filter((sig) => {
       if (sig.block === "nowcast" || sig.weight <= 0) return false;
-      return detectEpisodes(source.replay(sig)).some(
+      return (episodesBySignal.get(sig.key) ?? []).some(
         (ep) =>
           monthIndex(ep.start.slice(0, 7)) <= monthIndex(r.start) &&
           monthIndex((ep.end ?? ep.start).slice(0, 7)) >= monthIndex(r.start) - 24,
@@ -144,6 +159,6 @@ export function renderEpisodes(
 
   out.push("", t(locale, "episodes.note", { mode: t(locale, args.asof ? "episodes.mode_asof" : "episodes.mode_latest") }));
   const text = out.join("\n").slice(0, 4096);
-  cache.set(cacheKey, { text, at: Date.now() });
+  cacheSet(cacheKey, text);
   return text;
 }

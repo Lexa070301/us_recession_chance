@@ -15,11 +15,26 @@ function tokenFor(locale: string): string | undefined {
   return process.env[`TELEGRAPH_TOKEN_${locale.toUpperCase()}`];
 }
 
-/** Digest text → Telegraph node array (one paragraph per line). */
+/** Digest text → Telegraph node array (one paragraph per line, URLs linked). */
 function toNodes(text: string): unknown[] {
+  // telegra.ph does NOT autolink text nodes — bare URLs stay unclickable
+  // unless wrapped in <a> (audit M7). <a> is in the allowed tag set.
+  const linkify = (line: string): unknown[] => {
+    const out: unknown[] = [];
+    let rest = line;
+    for (;;) {
+      const m = /https?:\/\/\S+/.exec(rest);
+      if (!m) break;
+      if (m.index > 0) out.push(rest.slice(0, m.index));
+      out.push({ tag: "a", attrs: { href: m[0] }, children: [m[0]] });
+      rest = rest.slice(m.index + m[0].length);
+    }
+    if (rest) out.push(rest);
+    return out;
+  };
   return text
     .split("\n")
-    .map((line) => (line.trim() ? { tag: "p", children: [line] } : { tag: "br" }));
+    .map((line) => (line.trim() ? { tag: "p", children: linkify(line) } : { tag: "br" }));
 }
 
 export const telegraphVenue: Venue = {

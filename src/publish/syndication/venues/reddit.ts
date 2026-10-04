@@ -9,8 +9,9 @@ import {
 
 /**
  * Reddit (PLAN2 §3.8): own subreddit only (REDDIT_SUBREDDIT=USRecessionWatch).
- * Script-app password grant → oauth.reddit.com/api/submit. Link post when a
- * site URL exists (indexes better), self-text otherwise. Weekly + self-audit.
+ * Script-app password grant → oauth.reddit.com/api/submit. Always a self-post:
+ * a bare link drops the whole digest body — the text carries the content and
+ * the canonical URL rides at the bottom (audit M6). Weekly + self-audit.
  */
 
 const UA = "us-recession-watch/0.1 (by u/USRecessionWatch)";
@@ -57,14 +58,14 @@ export const redditVenue: Venue = {
     const token = await redditToken();
     const sr = process.env.REDDIT_SUBREDDIT!;
     const title = clip(post.title.replace(/^[^\w]*\s*/, ""), 300);
+    const body = post.url ? `${post.text}\n\n${post.url}` : post.text;
     const form = new URLSearchParams({
       sr,
       title,
-      kind: post.url ? "link" : "self",
+      kind: "self",
       api_type: "json",
+      text: clip(body, 10000),
     });
-    if (post.url) form.set("url", post.url);
-    else form.set("text", clip(post.text, 10000));
 
     const res = await fetch("https://oauth.reddit.com/api/submit", {
       method: "POST",

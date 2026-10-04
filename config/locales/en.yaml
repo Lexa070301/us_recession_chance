@@ -97,7 +97,7 @@ episodes:
   signal_header: "Signal episodes overlapping the window:"
   more: "  …{{n}} more"
   quiet: "No signal episodes in this window."
-  note: "Note: {{mode}} — run with 'asof' to see what signals would have said in real time."
+  note: "Note: {{mode}} — 'caught' counts an episode overlapping the recession start ±24m (broader than the 12m precision window used in /analytics). Add 'asof' for point-in-time data."
 
 weekly:
   title: "📋 Weekly dashboard — {{week}}"

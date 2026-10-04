@@ -8,7 +8,6 @@
   var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
   var STATE_DOT = { ok: "#3fb950", watch: "#d29922", warning: "#f0883e", critical: "#f85149" };
-  var MAX_SCORE = 14;
 
   function pickLocale() {
     var lang =
@@ -52,8 +51,9 @@
     var trend = d.trend || [];
     if (trend.length) {
       html += '<div class="panel"><h2>' + esc(L.trend_90d || "Trend") + '</h2><div class="spark">';
+      var scale = d.score_scale || 14; // server-provided (model.yaml bands)
       for (var i = 0; i < trend.length; i++) {
-        var h = Math.max(4, Math.round((Math.min(trend[i], MAX_SCORE) / MAX_SCORE) * 100));
+        var h = Math.max(4, Math.round((Math.min(trend[i], scale) / scale) * 100));
         var last = i === trend.length - 1;
         html += '<div style="height:' + h + "%" + (last ? ";background:" + esc(d.bucket_color || "") : "") + '"></div>';
       }

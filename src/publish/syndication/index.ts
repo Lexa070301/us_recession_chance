@@ -52,6 +52,9 @@ export async function syndicatePosts(
       }
       try {
         const out = await venue.publish(post);
+        // Contract: venues MUST throw on failure — a resolved null means
+        // "posted, no canonical URL" (e.g. Buffer returns no per-post link).
+        // Returning null on a silent no-op would burn the dedup key forever.
         markSyndicated(venue.key, post.locale, post.key, out?.url ?? null, db);
         res.published++;
       } catch (err) {

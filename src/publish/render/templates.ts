@@ -6,6 +6,7 @@ import type {
   SignalStateRow,
 } from "../../data/repositories/signalState.js";
 import type { CompositeResult } from "../../signals/score.js";
+import { scoreScaleMax } from "../../signals/score.js";
 import { probBucketLabel } from "../../signals/pooledProb.js";
 import { t } from "./i18n.js";
 
@@ -173,7 +174,10 @@ export function renderSignalEvent(
   ];
 
   let valueLine = `${formatWithUnit(event.value, unit, locale)} · ${statePart}`;
-  const ctx = event.payload_json ? (JSON.parse(event.payload_json) as Record<string, unknown>) : {};
+  let ctx: Record<string, unknown> = {};
+  try {
+    ctx = event.payload_json ? (JSON.parse(event.payload_json) as Record<string, unknown>) : {};
+  } catch { /* corrupt payload renders without context */ }
   const since = (ctx.since as string) ?? null;
   if (event.to_state !== "ok" && since) {
     valueLine += ` ${t(locale, "event.since", { since })}`;
@@ -385,7 +389,7 @@ export function renderAnalytics(states: SignalStateRow[], locale: string): strin
   return lines.join("\n");
 }
 
-/** Unicode sparkline ▁▂▃▄▅▆▇ — adaptive range, fixed 0–14 fallback. */
+/** Unicode sparkline ▁▂▃▄▅▆▇ — adaptive range, fixed-band-scale fallback. */
 export function sparkline(values: number[], width = 14): string {
   const pts = values.slice(-width);
   if (!pts.length) return "";
@@ -394,7 +398,7 @@ export function sparkline(values: number[], width = 14): string {
   let hi = Math.max(...pts);
   if (hi - lo < 1) {
     lo = 0;
-    hi = 14; // flat series → fixed composite scale keeps it honest
+    hi = scoreScaleMax(); // flat series → composite scale keeps it honest
   }
   const span = hi - lo;
   return pts

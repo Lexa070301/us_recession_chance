@@ -198,20 +198,37 @@ export async function jobCustomDigests(): Promise<void> {
 
   const { events, states, composite } = buildDigestPayload("daily");
   const fb = cfg.channels.defaults.fallback_locale;
+  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
   const texts = new Map<string, string>();
+
+  // Weekly for custom-time users is the SAME dashboard render as channels —
+  // sparkline, WoW delta and read-more links included (PLAN2 §5).
+  const renderFor = (kind: DigestKind, loc: string, key: string) => {
+    if (kind !== "weekly") return renderDigest(events, states, composite, loc, key.slice(2), kind);
+    return renderWeeklyDashboard(
+      getRecentEvents(168, db),
+      states,
+      composite,
+      trendScores(90, db),
+      getCompositeAtOrBefore(
+        new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 19).replace("T", " "),
+        db,
+      )?.score ?? null,
+      loc,
+      key.slice(2),
+      {
+        site: siteUrl ? `${siteUrl}${loc === fb ? "" : `/${loc}`}` : undefined,
+        telegraph: getSyndicationUrl("telegraph", loc, key, db),
+      },
+    );
+  };
 
   let enqueued = 0;
   for (const { user, kind } of due) {
     const key = digestKey(kind, now);
     const loc = user.locale;
     if (!texts.has(`${loc}:${kind}`)) {
-      const wk = kind === "weekly"
-        ? { events: getRecentEvents(168, db) }
-        : { events };
-      texts.set(
-        `${loc}:${kind}`,
-        renderDigest(wk.events, states, composite, loc, key.slice(2), kind),
-      );
+      texts.set(`${loc}:${kind}`, renderFor(kind, loc, key));
     }
     enqueued += enqueueDelivery(
       {
@@ -219,7 +236,7 @@ export async function jobCustomDigests(): Promise<void> {
         targetType: "dm",
         targetId: String(user.tg_user_id),
         locale: loc,
-        payloadText: texts.get(`${loc}:${kind}`) ?? renderDigest(events, states, composite, fb, key.slice(2), kind),
+        payloadText: texts.get(`${loc}:${kind}`) ?? renderFor(kind, fb, key),
       },
       db,
     ) ? 1 : 0;

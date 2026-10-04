@@ -35,6 +35,16 @@ export interface EngineRun {
   skipped: number;
 }
 
+/** Corrupt JSON in stored state must degrade to "no context", not kill the run. */
+function safeJson(s: string | null | undefined): Record<string, unknown> {
+  if (!s) return {};
+  try {
+    return JSON.parse(s) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Flap guard (min_event_gap_hours): a transition within the gap of the last
  * event is suppressed — the state row still updates (no stuck states), but no
@@ -79,7 +89,7 @@ export function runEngine(conn?: Database.Database): EngineRun {
       .digest("hex")
       .slice(0, 12);
     const storedHash = stored.context_json
-      ? (JSON.parse(stored.context_json) as Record<string, unknown>)._rule_hash
+      ? (safeJson(stored.context_json))._rule_hash
       : undefined;
 
     if (!latestObsDate) {
@@ -107,6 +117,13 @@ export function runEngine(conn?: Database.Database): EngineRun {
           getLastEvent(signal.key, db),
           result.state,
         );
+      // Suppressed transitions leave no signal_events row (by design — they
+      // must not reach alerts/digests), so the run log is the durable trace.
+      if (suppress) {
+        console.warn(
+          `[engine] ${signal.key}: ${stored.state}→${result.state} suppressed (min_event_gap_hours=${signal.min_event_gap_hours})`,
+        );
+      }
       const eventId = transitionSignalState(
         signal.key,
         {
@@ -144,7 +161,7 @@ export function runEngine(conn?: Database.Database): EngineRun {
   composite.modelProb = computePooledProb(db);
   const prev = getLatestComposite(db);
   const prevModel = prev?.detail_json
-    ? ((JSON.parse(prev.detail_json) as Record<string, unknown>)._model_prob as number | null)
+    ? ((safeJson(prev.detail_json))._model_prob as number | null)
     : null;
   const modelMoved =
     (composite.modelProb ?? null) !== null &&

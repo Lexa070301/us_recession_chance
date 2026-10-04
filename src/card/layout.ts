@@ -1,4 +1,6 @@
 import { BUCKET_COLORS, CARD_STATE_COLORS, type CardData } from "./data.js";
+import { scoreScaleMax } from "../signals/score.js";
+import { t } from "../publish/render/i18n.js";
 
 /**
  * Satori layout tree — plain objects, no JSX (tsconfig has no `jsx` and
@@ -26,10 +28,9 @@ const FAINT = "#64748b";
 const PANEL = "#16233b";
 const BAR = "#334155";
 
-const MAX_SCORE = 14; // composite bands top out ~13; fixed scale keeps bars comparable
-
 /** Sparkbar chart as div columns — satori can't render arbitrary <svg> reliably. */
 function sparkbars(trend: number[], accent: string): CardNode {
+  const max = scoreScaleMax(); // derived from model.yaml bands — not hardcoded
   const pts = trend.slice(-42);
   if (!pts.length) {
     return div(
@@ -38,7 +39,7 @@ function sparkbars(trend: number[], accent: string): CardNode {
     );
   }
   const bars: CardNode[] = pts.map((v, i) => {
-    const h = Math.max(6, Math.round((Math.min(v, MAX_SCORE) / MAX_SCORE) * 160));
+    const h = Math.max(6, Math.round((Math.min(v, max) / max) * 160));
     return div({
       width: 11,
       height: h,
@@ -134,7 +135,7 @@ export function cardTree(d: CardData): CardNode {
         ]),
         div({ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }, [
           sparkbars(d.trend, accent),
-          div({ fontSize: 20, color: FAINT }, d.locale === "ru" ? "скор · 90 дней" : "score · 90d"),
+          div({ fontSize: 20, color: FAINT }, t(d.locale, "card.trend_90d")),
         ]),
       ]),
 

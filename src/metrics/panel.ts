@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 import type { EvaluatorDef, InputRef, SignalDef } from "../config/schema.js";
-import { getObservations, type ObsRow } from "../data/repositories/observations.js";
+import { getLatestObsDate, getObservations, type ObsRow } from "../data/repositories/observations.js";
 import { applyTransform } from "./transforms.js";
 
 /**
@@ -51,8 +51,9 @@ export class Panel {
     let max: string | null = null;
     const keys = new Set(Panel.signalInputs(signal).map((r) => r.key));
     for (const key of keys) {
-      const obs = getObservations(key, {}, this.conn);
-      const d = obs.length ? obs[obs.length - 1].date : null;
+      // One indexed MAX() per series — loading full history just to take the
+      // last row hurts at sahm_states scale (51 series per engine run).
+      const d = getLatestObsDate(key, this.conn);
       if (d && (!max || d > max)) max = d;
     }
     return max;

@@ -33,7 +33,10 @@ export function enqueueDelivery(
     .prepare(
       `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text)
        VALUES (?, ?, ?, ?, ?, ?)
-       ON CONFLICT DO NOTHING`,
+       -- target the dedup index explicitly: a bare ON CONFLICT would
+       -- silently swallow ANY future constraint violation (audit L8)
+       ON CONFLICT (digest_key, target_type, target_id) WHERE digest_key IS NOT NULL
+       DO NOTHING`,
     )
     .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText);
   return res.changes ? Number(res.lastInsertRowid) : 0;

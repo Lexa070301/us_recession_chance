@@ -2,6 +2,61 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 11: external audit fixes)
+
+Independent audit verified ~20 findings against code. Root cause of the
+critical one: `.gitignore` `site/` was unanchored — it matched `src/site/`,
+so the whole Pages/Mini-App generator existed only on disk, never in the
+repo (typecheck/tests/deploy broken on any fresh clone).
+
+### Fixed
+
+- **C1** `.gitignore` `site/` → `/site/`; committed the missing `src/site/`.
+- **H1** Buffer: added required `mode: shareNow` + `needsApproval: false`
+  to `CreatePostInput`; union response now handled via
+  `PostActionSuccess`/`MutationError` fragments — a MutationError throws
+  instead of silently burning the dedup key. Mock-based venue test added.
+- **H2** Weekly chain decoupled from `weekly_digest_time_utc` in GHA: on
+  the configured weekly day the digest step calls `jobDigest("weekly")` +
+  `jobSelfAudit` explicitly (w:/a: dedup keys make it a no-op if already
+  sent). Previously a weekly time later than the 13:20 cron silently
+  disabled weekly digest + card + syndication + audit forever.
+- **H3** `/episodes`: signal replays memoized across the NBER catch loop
+  (was O(recessions × signals)); render cache bounded to 64 entries.
+- **M1** `sahm_states` `since` now carries the stored episode start
+  (`prev.since`) instead of always reporting the newest obs date.
+- **M2** Suppressed transitions log a durable `console.warn` line (the
+  `signal_events` table stays alert-only by design).
+- **M3** Custom-time Plus users get the same weekly dashboard render
+  (sparkline, WoW delta, read-more links) — was plain `renderDigest`.
+- **M4** Unguarded `JSON.parse` in engine moved behind `safeJson`.
+- **M5** Venue contract documented: resolved `null` = "posted, no URL";
+  venues must throw on failure.
+- **M6** Reddit switched to self-posts with the URL appended — a bare
+  link dropped the entire digest body.
+- **M7** Telegraph `toNodes` linkifies URLs (`<a>` nodes) — telegra.ph
+  does not autolink text.
+- **L1/L2** Card trend label localized (`card.trend_90d`); `MAX_SCORE`
+  replaced by `scoreScaleMax()` derived from `model.yaml` bands; Mini App
+  reads `score_scale` from `data.json`.
+- **L3** `.env.example` SYNDICATION_LOCALES comment now matches code
+  (default `en`).
+- **L4** `bucketForScore` guards non-finite scores explicitly.
+- **L5** `/episodes` note explains the ±24m catch window vs 12m precision.
+- **L6** `Panel.latestObsDate` uses indexed `getLatestObsDate` (was full
+  history load per series — 51× per run for sahm_states).
+- **L8** `enqueueDelivery` conflict target names the dedup index columns
+  explicitly (bare `ON CONFLICT` would swallow future violations).
+- **L9** `renderSignalEvent` payload parse guarded.
+- **L10** `signal_episodes` comments corrected (upsert, not append-only).
+
+### Not changed (verified, by design)
+
+- `latestVintageAt` — dead in prod paths but a tested utility used by
+  vintage tests; kept.
+- Delta-model vintages can't represent FRED row deletions; publish-lag
+  approximations documented in PLAN2 methodology section.
+
 ## 2026-10-05 (implementation pass 10: PLAN2 roadmap — waves A–C)
 
 Full audited PLAN2.md implemented: 14 items, all waves.
