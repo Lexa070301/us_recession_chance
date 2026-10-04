@@ -10,6 +10,12 @@ export const seriesDefSchema = z.object({
   frequency: frequencySchema,
   unit: z.string(),
   hist_start: z.string().optional(),
+  /** `alfred` = backfill vintage deltas (point-in-time history for honest
+   * backtests); `none` = latest revision only (market series aren't
+   * revised, so they don't need snapshots). */
+  vintage: z.enum(["alfred", "none"]).default("none"),
+  /** Observation window fetched per vintage batch (years back). */
+  vintage_lookback_years: z.number().positive().default(40),
 });
 export type SeriesDef = z.infer<typeof seriesDefSchema>;
 
@@ -113,6 +119,16 @@ export const evaluatorSchema: z.ZodType<EvaluatorDef> = z.lazy(() =>
       }),
     }),
     z.object({
+      type: z.literal("sahm_states"),
+      params: z.object({
+        /** State UR series keys (ur_state_XX) — resolved via transform `sahm`. */
+        keys: z.array(z.string()).min(1),
+        trigger: z.number(),
+        warn_count: z.number().int(),
+        critical_count: z.number().int().optional(),
+      }),
+    }),
+    z.object({
       type: z.literal("any_of"),
       branches: z.array(z.lazy(() => evaluatorSchema)).min(1),
     }),
@@ -130,6 +146,7 @@ export type EvaluatorDef =
   | { type: "rise_from_trough"; input?: InputRef; params: { window: number; rise_pct?: number; rise_abs?: number; critical_pct?: number; critical_abs?: number } }
   | { type: "change_over_period"; input?: InputRef; params: { periods: number; op: Op; warn: number; critical?: number; ref_below?: number } }
   | { type: "yoy"; input?: InputRef; params: { op: Op; threshold: number; warn: number; critical?: number } }
+  | { type: "sahm_states"; params: { keys: string[]; trigger: number; warn_count: number; critical_count?: number } }
   | { type: "any_of"; branches: EvaluatorDef[] }
   | { type: "all_of"; branches: EvaluatorDef[] };
 
@@ -151,6 +168,9 @@ export const signalDefSchema = z.object({
   weight: z.number(),
   input: inputRefSchema,
   evaluator: evaluatorSchema,
+  /** Flap guard: transitions closer than this to the previous event update
+   * state silently (no SignalEvent) unless they escalate to `critical`. */
+  min_event_gap_hours: z.number().positive().optional(),
   hist: histSchema.optional(),
 });
 export type SignalDef = z.infer<typeof signalDefSchema>;

@@ -32,20 +32,24 @@ npm run dev            # MODE=all: bot + scheduler
 
 ## Commands
 
-| Command                          | What it does                                                                 |
-| -------------------------------- | ---------------------------------------------------------------------------- |
-| `npm run dev`                    | Run app (MODE=bot\|scheduler\|all, default all)                              |
-| `npm run build` / `npm start`    | Compile to `dist/` / run compiled app                                        |
-| `npm run typecheck` / `npm test` | `tsc --noEmit` / vitest                                                      |
-| `npm run backfill -- <years>`    | Fetch history for all FRED series                                            |
-| `npm run check-signals`          | Evaluate signals + composite (dry run)                                       |
-| `npm run send-test`              | Send a test message to configured channels                                   |
-| `npm run devsub -- <cmd> [args]` | Dev subscription lifecycle: `grant`/`refund`/`expire`/`status` (no Telegram) |
-| `npm run digest`                 | Build + send the daily digest once                                           |
-| `npm run backtest`               | Replay signals vs NBER recessions; calibrate score bands                     |
-| `npm run fit-model`              | Fit pooled 12m logit; print coefs + YAML for model.yaml                      |
-| `npm run backup`                 | Online SQLite backup to `data/backups/`                                      |
-| `npm run health`                 | One-off healthcheck report                                                   |
+| Command                          | What it does                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `npm run dev`                    | Run app (MODE=bot\|scheduler\|all, default all)                                |
+| `npm run build` / `npm start`    | Compile to `dist/` / run compiled app                                          |
+| `npm run typecheck` / `npm test` | `tsc --noEmit` / vitest                                                        |
+| `npm run backfill -- <years>`    | Fetch history for all FRED series                                              |
+| `npm run check-signals`          | Evaluate signals + composite (dry run)                                         |
+| `npm run send-test`              | Send a test message to configured channels                                     |
+| `npm run devsub -- <cmd> [args]` | Dev subscription lifecycle: `grant`/`refund`/`expire`/`status` (no Telegram)   |
+| `npm run digest`                 | Build + send the daily digest once                                             |
+| `npm run backtest`               | Replay signals vs NBER recessions; `--vintage` compares latest vs ALFRED as-of |
+| `npm run vintages -- [series]`   | Backfill ALFRED vintage deltas for revision-prone series                       |
+| `npm run fit-model`              | Fit pooled 12m logit; print coefs + YAML for model.yaml                        |
+| `npm run card -- [--ru] [--out]` | Render the weekly PNG card (satori + resvg)                                    |
+| `npm run site`                   | Render the GitHub Pages bundle into `site/` (html, data.json, feeds, app/)     |
+| `npm run menu-button`            | Install the Mini App menu button (needs `SITE_URL`)                            |
+| `npm run backup`                 | Online SQLite backup to `data/backups/`                                        |
+| `npm run health`                 | One-off healthcheck report                                                     |
 
 ## Configuration
 
@@ -115,3 +119,24 @@ Optional channel-only alternative: run `npm run backfill` +
 `npm run check-signals` + `npm run digest` from GitHub Actions cron —
 no server needed, but no bot interactions then. Requires the repo secrets
 `FRED_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TG_CHANNEL_EN`, `TG_CHANNEL_RU`.
+
+## Publishing (GitHub Actions)
+
+The Actions runner is the **single publishing environment** — the VPS must
+not set `TG_CHANNEL_*`, `SYNDICATION_ENABLED` or `CARD_ENABLED`, or posts
+double (each environment has its own SQLite, so dedup can't catch it).
+
+- **Weekly PNG card** — `CARD_ENABLED=true` sends a 1200×630 card before
+  the weekly text digest (photo-first, dedup via `card_sent_keys`).
+- **GitHub Pages** — the `pages` job renders `site/` (localized dashboard,
+  `data.{loc}.json`, Atom feeds, Mini App) and deploys it. Set the Pages
+  source to "GitHub Actions" once in repo settings, and add the
+  `SITE_URL` repo variable (e.g. `https://<user>.github.io/<repo>`).
+- **Syndication** — `SYNDICATION_ENABLED=true` publishes the digest to
+  Telegraph (linked via "read more"), Bluesky, Mastodon, Discord, Reddit
+  (own subreddit) and Buffer (→ X/Threads/LinkedIn). Per-venue secrets in
+  `.env.example`; unset secrets simply disable that venue.
+- **Self-audit** — runs after the weekly digest under the same gate:
+  replays all signals, classifies episodes vs NBER, posts the report.
+- **Mini App** — `/dashboard` opens `SITE_URL/app/`; run
+  `npm run menu-button` once to put it on the chat menu button.

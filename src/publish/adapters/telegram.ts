@@ -1,4 +1,4 @@
-import { Api } from "grammy";
+import { Api, InputFile } from "grammy";
 import { getConfig } from "../../config/load.js";
 
 let api: Api | undefined;
@@ -29,4 +29,18 @@ export async function sendTelegramMessage(chatId: string | number, text: string)
     }
     throw err;
   }
+}
+
+/**
+ * Send a photo (digest card). Photos bypass the text-only outbox — callers
+ * dedup via card_sent_keys and isolate failures from text delivery.
+ * Caption <= 1024 chars (Telegram limit).
+ */
+export async function sendTelegramPhoto(
+  chatId: string | number,
+  png: Buffer,
+  caption?: string,
+): Promise<void> {
+  const tg = getTelegramApi();
+  await tg.sendPhoto(chatId, new InputFile(png, "card.png"), caption ? { caption } : {});
 }

@@ -77,10 +77,28 @@ export function nyfedProb(obs: ObsRow[]): ObsRow[] {
   }));
 }
 
+/**
+ * Sahm-rule transform (monthly): MA3(value) − min(MA3 over trailing 12m).
+ * A state/national series is "triggered" when the result ≥ ~0.5.
+ * Needs ≥14 monthly obs (3 for MA + 12 for the trailing min).
+ */
+export function sahmRule(obs: ObsRow[]): ObsRow[] {
+  const ma = movingAverage(obs, 3);
+  const out: ObsRow[] = [];
+  for (let i = 0; i < ma.length; i++) {
+    const win = ma.slice(Math.max(0, i - 11), i + 1);
+    if (win.length < 12) continue;
+    const min = Math.min(...win.map((o) => o.value));
+    out.push({ date: ma[i].date, value: ma[i].value - min });
+  }
+  return out;
+}
+
 export type TransformFn = (obs: ObsRow[]) => ObsRow[];
 
 const REGISTRY: Record<string, TransformFn> = {
   value: (o) => o,
+  sahm: sahmRule,
   ma3: (o) => movingAverage(o, 3),
   ma4: (o) => movingAverage(o, 4),
   ma13: (o) => movingAverage(o, 13),

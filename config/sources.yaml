@@ -90,24 +90,28 @@ series:
     frequency: monthly
     unit: thousands_saar
     hist_start: "1960-01"
+    vintage: alfred
   - key: housing_starts
     source: fred
     series_id: HOUST
     frequency: monthly
     unit: thousands_saar
     hist_start: "1959-01"
+    vintage: alfred
   - key: dg_orders
     source: fred
     series_id: DGORDER
     frequency: monthly
     unit: usd_millions
     hist_start: "1992-02"
+    vintage: alfred
   - key: indpro
     source: fred
     series_id: INDPRO
     frequency: monthly
     unit: index
     hist_start: "1919-01"
+    vintage: alfred
 
   # --- labor ---
   - key: icsa
@@ -116,54 +120,65 @@ series:
     frequency: weekly
     unit: persons
     hist_start: "1967-01"
+    vintage: alfred
+    vintage_lookback_years: 20
   - key: ccsa
     source: fred
     series_id: CCSA
     frequency: weekly
     unit: persons
     hist_start: "1967-01"
+    vintage: alfred
+    vintage_lookback_years: 20
   - key: unrate
     source: fred
     series_id: UNRATE
     frequency: monthly
     unit: percent
     hist_start: "1948-01"
+    vintage: alfred
   - key: payems
     source: fred
     series_id: PAYEMS
     frequency: monthly
     unit: thousands
     hist_start: "1939-01"
+    vintage: alfred
   - key: temp_help
     source: fred
     series_id: TEMPHELPS
     frequency: monthly
     unit: thousands
     hist_start: "1990-01"
+    vintage: alfred
   - key: job_openings
     source: fred
     series_id: JTSJOL
     frequency: monthly
     unit: thousands
     hist_start: "2000-12"
+    vintage: alfred
   - key: quits_rate
     source: fred
     series_id: JTSQUR
     frequency: monthly
     unit: percent
     hist_start: "2000-12"
+    vintage: alfred
   - key: hires_rate
     source: fred
     series_id: JTSHIR
     frequency: monthly
     unit: percent
     hist_start: "2000-12"
+    vintage: alfred
   - key: layoffs_rate
     source: fred
     series_id: JTSLDL
     frequency: monthly
     unit: percent
     hist_start: "2000-12"
+    vintage: alfred
 
   # --- bank lending standards (SLOOS, quarterly) ---
   - key: sloos_ci
@@ -172,6 +187,7 @@ series:
     frequency: quarterly
     unit: percent
     hist_start: "1990-04"
+    vintage: alfred
 
   # --- composite / nowcast ---
   # USSLIND (OECD CLI) was discontinued on FRED ~2020-02 — kept for history,
@@ -188,6 +204,7 @@ series:
     frequency: monthly
     unit: index
     hist_start: "1967-03"
+    vintage: alfred
   - key: sahm
     source: fred
     series_id: SAHMREALTIME
@@ -200,6 +217,7 @@ series:
     frequency: monthly
     unit: percent
     hist_start: "1967-08"
+    vintage: alfred
 
   # --- recession marker (NBER via FRED) ---
   - key: usrec
@@ -208,3 +226,313 @@ series:
     frequency: monthly
     unit: binary
     hist_start: "1854-12"
+
+  # --- state unemployment rates (Sahm-states nowcast, PLAN2 §7) ---
+  # {CODE}UR: monthly SA unemployment rate per state, from 1976-01.
+  # vintage: none — live nowcast only (experimental); no as-of replay.
+  - key: ur_state_al
+    source: fred
+    series_id: ALUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ak
+    source: fred
+    series_id: AKUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_az
+    source: fred
+    series_id: AZUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ar
+    source: fred
+    series_id: ARUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ca
+    source: fred
+    series_id: CAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_co
+    source: fred
+    series_id: COUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ct
+    source: fred
+    series_id: CTUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_de
+    source: fred
+    series_id: DEUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_dc
+    source: fred
+    series_id: DCUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_fl
+    source: fred
+    series_id: FLUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ga
+    source: fred
+    series_id: GAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_hi
+    source: fred
+    series_id: HIUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_id
+    source: fred
+    series_id: IDUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_il
+    source: fred
+    series_id: ILUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_in
+    source: fred
+    series_id: INUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ia
+    source: fred
+    series_id: IAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ks
+    source: fred
+    series_id: KSUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ky
+    source: fred
+    series_id: KYUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_la
+    source: fred
+    series_id: LAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_me
+    source: fred
+    series_id: MEUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_md
+    source: fred
+    series_id: MDUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ma
+    source: fred
+    series_id: MAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_mi
+    source: fred
+    series_id: MIUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_mn
+    source: fred
+    series_id: MNUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ms
+    source: fred
+    series_id: MSUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_mo
+    source: fred
+    series_id: MOUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_mt
+    source: fred
+    series_id: MTUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ne
+    source: fred
+    series_id: NEUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nv
+    source: fred
+    series_id: NVUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nh
+    source: fred
+    series_id: NHUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nj
+    source: fred
+    series_id: NJUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nm
+    source: fred
+    series_id: NMUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ny
+    source: fred
+    series_id: NYUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nc
+    source: fred
+    series_id: NCUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_nd
+    source: fred
+    series_id: NDUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_oh
+    source: fred
+    series_id: OHUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ok
+    source: fred
+    series_id: OKUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_or
+    source: fred
+    series_id: ORUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_pa
+    source: fred
+    series_id: PAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ri
+    source: fred
+    series_id: RIUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_sc
+    source: fred
+    series_id: SCUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_sd
+    source: fred
+    series_id: SDUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_tn
+    source: fred
+    series_id: TNUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_tx
+    source: fred
+    series_id: TXUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_ut
+    source: fred
+    series_id: UTUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_vt
+    source: fred
+    series_id: VTUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_va
+    source: fred
+    series_id: VAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_wa
+    source: fred
+    series_id: WAUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_wv
+    source: fred
+    series_id: WVUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_wi
+    source: fred
+    series_id: WIUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"
+  - key: ur_state_wy
+    source: fred
+    series_id: WYUR
+    frequency: monthly
+    unit: percent
+    hist_start: "1976-01"

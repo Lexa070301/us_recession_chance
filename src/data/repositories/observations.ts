@@ -55,6 +55,80 @@ export function getLatestObsDate(seriesKey: string, conn?: Database.Database): s
   return row?.date ?? null;
 }
 
+// ------------------------------------------------------------------
+// ALFRED vintages (rows with vintage_date != '')
+// ------------------------------------------------------------------
+
+/** Distinct vintage dates stored for a series, ascending ('' excluded). */
+export function getVintageDates(seriesKey: string, conn?: Database.Database): string[] {
+  const db = conn ?? getDb();
+  return (
+    db
+      .prepare(
+        `SELECT DISTINCT vintage_date FROM observations
+         WHERE series_key = ? AND vintage_date != '' ORDER BY vintage_date`,
+      )
+      .all(seriesKey) as { vintage_date: string }[]
+  ).map((r) => r.vintage_date);
+}
+
+/** Latest stored vintage on/before asOfDate; null when none exists. */
+export function latestVintageAt(
+  seriesKey: string,
+  asOfDate: string,
+  conn?: Database.Database,
+): string | null {
+  const db = conn ?? getDb();
+  const row = db
+    .prepare(
+      `SELECT MAX(vintage_date) AS v FROM observations
+       WHERE series_key = ? AND vintage_date != '' AND vintage_date <= ?`,
+    )
+    .get(seriesKey, asOfDate) as { v: string | null };
+  return row.v;
+}
+
+/**
+ * Observations as they were known on asOfDate — point-in-time reconstruction.
+ *
+ * FRED vintage fetches store DELTAS, not full snapshots: a row
+ * (series, date, vintage) is the value for `date` as it became valid in that
+ * vintage, and it stays valid until a later vintage revises it. So the as-of
+ * series is, per observation date, the value from the latest vintage <= asOf.
+ *
+ * Returns [] when no vintage exists on/before asOfDate — deliberately NOT a
+ * fallback to the latest revision ('' rows), which would leak revised data.
+ * Callers handling vintage-free series should check getVintageDates() first.
+ */
+export function observationsAsOf(
+  seriesKey: string,
+  asOfDate: string,
+  opts: { startDate?: string; endDate?: string } = {},
+  conn?: Database.Database,
+): ObsRow[] {
+  const db = conn ?? getDb();
+  let sql = `
+    SELECT o.date, o.value FROM observations o
+    JOIN (
+      SELECT date, MAX(vintage_date) AS v
+      FROM observations
+      WHERE series_key = ? AND vintage_date != '' AND vintage_date <= ?
+      GROUP BY date
+    ) m ON m.date = o.date AND m.v = o.vintage_date
+    WHERE o.series_key = ? AND o.vintage_date != ''`;
+  const params: unknown[] = [seriesKey, asOfDate, seriesKey];
+  if (opts.startDate) {
+    sql += " AND o.date >= ?";
+    params.push(opts.startDate);
+  }
+  if (opts.endDate) {
+    sql += " AND o.date <= ?";
+    params.push(opts.endDate);
+  }
+  sql += " ORDER BY o.date";
+  return db.prepare(sql).all(...params) as ObsRow[];
+}
+
 export function logFetch(
   seriesKey: string,
   status: "success" | "error",

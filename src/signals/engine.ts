@@ -6,11 +6,13 @@ import { getDb } from "../data/db.js";
 import {
   getAllSignalStates,
   getEvent,
+  getLastEvent,
   getLatestComposite,
   getSignalState,
   insertCompositeSnapshot,
   transitionSignalState,
   type SignalEventRow,
+  type SignalState,
 } from "../data/repositories/signalState.js";
 import { Panel } from "../metrics/panel.js";
 import { evaluate } from "./evaluators.js";
@@ -31,6 +33,25 @@ export interface EngineRun {
   prevScore: number | null;
   evaluated: number;
   skipped: number;
+}
+
+/**
+ * Flap guard (min_event_gap_hours): a transition within the gap of the last
+ * event is suppressed — the state row still updates (no stuck states), but no
+ * SignalEvent is emitted. Escalations to `critical` always pass: alert-safety
+ * beats anti-spam. Suppressed transitions don't reach instant alerts or the
+ * "changes" digest block; the state stays honest and shows under "active".
+ * signal_events.ts is `datetime('now')` = 'YYYY-MM-DD HH:MM:SS' UTC.
+ */
+export function shouldSuppressEvent(
+  gapHours: number | undefined,
+  lastEvent: { ts: string } | undefined,
+  toState: SignalState,
+  now = Date.now(),
+): boolean {
+  if (!gapHours || !lastEvent || toState === "critical") return false;
+  const last = Date.parse(`${lastEvent.ts.replace(" ", "T")}Z`);
+  return Number.isFinite(last) && now - last < gapHours * 3_600_000;
 }
 
 /**
@@ -79,6 +100,13 @@ export function runEngine(conn?: Database.Database): EngineRun {
         { state: stored.state, since: stored.episode_start ?? stored.since },
       );
 
+      const suppress =
+        stored.state !== result.state &&
+        shouldSuppressEvent(
+          signal.min_event_gap_hours,
+          getLastEvent(signal.key, db),
+          result.state,
+        );
       const eventId = transitionSignalState(
         signal.key,
         {
@@ -87,9 +115,15 @@ export function runEngine(conn?: Database.Database): EngineRun {
           episodeStart: result.state === "ok" ? null : result.since,
           value: result.value,
           obsDate: latestObsDate,
-          context: { ...result.context, since: result.since, _rule_hash: ruleHash },
+          context: {
+            ...result.context,
+            since: result.since,
+            _rule_hash: ruleHash,
+            ...(suppress ? { suppressed: { from: stored.state, to: result.state } } : {}),
+          },
         },
         db,
+        { suppressEvent: suppress },
       );
       evaluated++;
       if (eventId !== null) {

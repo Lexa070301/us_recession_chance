@@ -154,6 +154,43 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE user_prefs ADD COLUMN score_threshold REAL;
     `,
   },
+  {
+    id: "0004_episodes_syndications_cards",
+    sql: `
+      -- External-venue publication log (PLAN2 §3). locale is part of the PK:
+      -- multi-locale venues (Telegraph EN+RU pages) need one row per locale;
+      -- single-locale venues use '*' or 'en'. Self-audit uses a:YYYY-Www keys.
+      CREATE TABLE IF NOT EXISTS syndications (
+        venue TEXT NOT NULL,
+        locale TEXT NOT NULL,
+        digest_key TEXT NOT NULL,
+        url TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (venue, locale, digest_key)
+      ) WITHOUT ROWID;
+
+      -- Photo dedup outside the text outbox (PLAN2 §4): a digest rerun must
+      -- not re-send the card image.
+      CREATE TABLE IF NOT EXISTS card_sent_keys (
+        digest_key TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (digest_key, target_id)
+      ) WITHOUT ROWID;
+
+      -- Cached replay episodes for the self-audit job (PLAN2 §6):
+      -- append-only; outcome filled once the 12m window resolves.
+      CREATE TABLE IF NOT EXISTS signal_episodes (
+        signal_key TEXT NOT NULL,
+        start TEXT NOT NULL,
+        end TEXT,
+        peak TEXT,
+        outcome TEXT,
+        evaluated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (signal_key, start)
+      ) WITHOUT ROWID;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

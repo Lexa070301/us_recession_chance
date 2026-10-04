@@ -7,6 +7,9 @@ import {
   cmdGuide,
   cmdLang,
   cmdPaySupport,
+  cmdNow,
+  cmdEpisodes,
+  cmdDashboard,
   cmdPlan,
   cmdSettings,
   cmdSignals,
@@ -47,6 +50,9 @@ export function createBot(): Bot {
   bot.command("lang", cmdLang);
   bot.command("signals", cmdSignals);
   bot.command("analytics", cmdAnalytics);
+  bot.command("now", cmdNow);
+  bot.command("episodes", cmdEpisodes);
+  bot.command("dashboard", cmdDashboard);
   bot.command("digest", cmdDigest);
   bot.command("plan", cmdPlan);
   bot.command("terms", cmdTerms);

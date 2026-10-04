@@ -6,10 +6,8 @@ import {
   monthAdd,
   monthEnd,
   monthIndex,
-  replaySignal,
-  stateAt,
+  type BacktestSource,
   type Episode,
-  type SeriesCache,
 } from "./replay.js";
 
 export const HORIZON_MONTHS = 12;
@@ -51,11 +49,11 @@ const round2 = (x: number | null): number | null => (x === null ? null : Math.ro
  */
 export function signalBacktest(
   signal: SignalDef,
-  cache: SeriesCache,
+  source: BacktestSource,
   recessions: RecessionPeriod[],
   usrecLastMonth: string,
 ): SignalBacktest {
-  const states = replaySignal(signal, cache);
+  const states = source.replay(signal);
   const episodes = detectEpisodes(states);
   const starts = recessions.map((r) => r.start);
 
@@ -139,7 +137,7 @@ export interface ScoreRow {
  */
 export function compositeScoreGrid(
   signals: SignalDef[],
-  cache: SeriesCache,
+  source: BacktestSource,
   recessions: RecessionPeriod[],
   usrecLastMonth: string,
 ): ScoreRow[] {
@@ -151,7 +149,7 @@ export function compositeScoreGrid(
   let first = "9999-12";
   let last = "0000-01";
   for (const sig of weighted) {
-    const { obs } = cache.get(sig.input);
+    const { obs } = source.inputObs(sig);
     if (!obs.length) continue;
     if (obs[0].date < first) first = obs[0].date;
     if (obs[obs.length - 1].date > last) last = obs[obs.length - 1].date;
@@ -173,7 +171,7 @@ export function compositeScoreGrid(
   for (let m = first.slice(0, 7); monthIndex(m) <= monthIndex(last); m = monthAdd(m, 1)) {
     const evalDate = monthEnd(m);
     let score = 0;
-    for (const sig of weighted) score += sig.weight * mult(stateAt(sig, cache, evalDate));
+    for (const sig of weighted) score += sig.weight * mult(source.stateAt(sig, evalDate));
 
     let outcome: number | null = null;
     if (!inRec.has(m) && !postRecShadow.has(m) && monthIndex(m) <= lastKnown) {
@@ -188,6 +186,41 @@ export function compositeScoreGrid(
     rows.push({ month: m, score, outcome });
   }
   return rows;
+}
+
+export type EpisodeOutcome = "hit" | "fp" | "pending";
+
+/**
+ * Per-episode outcome for the self-audit (PLAN2 §6) — mirrors the
+ * signalBacktest rules: hit = recession onset inside the signal's window;
+ * pending = the outcome window hasn't closed yet.
+ */
+export function classifyEpisodes(
+  episodes: Episode[],
+  recessions: RecessionPeriod[],
+  usrecLastMonth: string,
+  isNowcast = false,
+): { ep: Episode; outcome: EpisodeOutcome }[] {
+  const starts = recessions.map((r) => r.start);
+  // forecast: hit window = onset+12m → knowable while onset <= last-12.
+  // nowcast:  hit window = [start-3m, start+6m] lag → knowable while onset <= last-6.
+  const knowableEnd = monthIndex(usrecLastMonth) - (isNowcast ? 6 : HORIZON_MONTHS);
+  return episodes.map((ep) => {
+    const onset = monthIndex(ep.start);
+    if (onset > knowableEnd) return { ep, outcome: "pending" as const };
+    if (isNowcast) {
+      const hit = starts.some((s) => {
+        const lag = onset - monthIndex(s);
+        return lag >= -3 && lag <= 6;
+      });
+      return { ep, outcome: (hit ? "hit" : "fp") as EpisodeOutcome };
+    }
+    const hit = starts.some((s) => {
+      const lead = monthIndex(s) - onset;
+      return lead > 0 && lead <= HORIZON_MONTHS;
+    });
+    return { ep, outcome: (hit ? "hit" : "fp") as EpisodeOutcome };
+  });
 }
 
 export interface BandCalibration {

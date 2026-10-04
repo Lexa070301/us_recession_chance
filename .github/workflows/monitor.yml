@@ -57,5 +57,76 @@ jobs:
           TG_CHANNEL_RU: ${{ secrets.TG_CHANNEL_RU }}
           BOT_USERNAME: ${{ vars.BOT_USERNAME }}
           DATABASE_PATH: ./data/recession.db
+          # PLAN2 §3/§4: this runner is the ONLY publishing environment.
+          # vars.* act as feature toggles; unset secrets → venues self-disable.
+          SYNDICATION_ENABLED: ${{ vars.SYNDICATION_ENABLED }}
+          CARD_ENABLED: ${{ vars.CARD_ENABLED }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          TELEGRAPH_TOKEN_EN: ${{ secrets.TELEGRAPH_TOKEN_EN }}
+          TELEGRAPH_TOKEN_RU: ${{ secrets.TELEGRAPH_TOKEN_RU }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_CHANNEL_X: ${{ secrets.BUFFER_CHANNEL_X }}
+          BUFFER_CHANNEL_THREADS: ${{ secrets.BUFFER_CHANNEL_THREADS }}
+          BUFFER_CHANNEL_LINKEDIN: ${{ secrets.BUFFER_CHANNEL_LINKEDIN }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_SUBREDDIT: ${{ vars.REDDIT_SUBREDDIT }}
         run: |
           npx tsx -e "import 'dotenv/config'; import { jobDigestAuto } from './src/jobs/digest.ts'; jobDigestAuto()"
+
+  # GitHub Pages (PLAN2 §2): dashboard + feeds + data.json (Mini App).
+  # Pages source must be set to "GitHub Actions" in repo settings once;
+  # `environment: github-pages` is required for the deploy action.
+  pages:
+    if: github.event.schedule == '20 13 * * *' || github.event_name == 'workflow_dispatch'
+    needs: run
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Restore SQLite cache
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: recession-db-${{ github.run_id }}
+          restore-keys: recession-db-
+
+      - name: Render site
+        env:
+          DATABASE_PATH: ./data/recession.db
+          BOT_USERNAME: ${{ vars.BOT_USERNAME }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: npm run site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

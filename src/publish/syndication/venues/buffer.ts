@@ -1,0 +1,79 @@
+import {
+  clip,
+  postJson,
+  syndicationLocales,
+  type ExternalPost,
+  type PublishResult,
+  type Venue,
+} from "../types.js";
+
+/**
+ * Buffer (PLAN2 §3.6): one venue multiplexing X + Threads + LinkedIn via the
+ * new GraphQL API (legacy REST API sunsets 2027-02-01). Free tier: 3 channels,
+ * 250 req/24h — we make at most 3 calls per digest. Weekly + self-audit only.
+ *
+ * Channel IDs come from the Buffer dashboard (env per network). Field names
+ * verified against the GraphQL schema at implementation time — adjust
+ * `CreatePostInput` if the API has since renamed them.
+ */
+
+const ENDPOINT = "https://api.buffer.com";
+
+const CHANNEL_LIMITS: Record<string, number> = {
+  x: 280,
+  threads: 500,
+  linkedin: 4000,
+};
+
+function channels(): { network: string; id: string; limit: number }[] {
+  const envs: [string, string | undefined][] = [
+    ["x", process.env.BUFFER_CHANNEL_X],
+    ["threads", process.env.BUFFER_CHANNEL_THREADS],
+    ["linkedin", process.env.BUFFER_CHANNEL_LINKEDIN],
+  ];
+  return envs
+    .filter((e): e is [string, string] => !!e[1])
+    .map(([network, id]) => ({ network, id, limit: CHANNEL_LIMITS[network] }));
+}
+
+async function createPost(apiKey: string, channelId: string, text: string): Promise<string | undefined> {
+  const res = (await postJson(
+    ENDPOINT,
+    {
+      query: `mutation CreatePost($input: CreatePostInput!) {
+        createPost(input: $input) { id }
+      }`,
+      variables: { input: { channelId, text, schedulingType: "automatic" } },
+    },
+    { authorization: `Bearer ${apiKey}` },
+  )) as { data?: { createPost?: { id?: string } }; errors?: { message: string }[] };
+  if (res.errors?.length) throw new Error(`buffer: ${res.errors[0].message}`);
+  return res.data?.createPost?.id;
+}
+
+export const bufferVenue: Venue = {
+  key: "buffer",
+  kinds: ["weekly", "self_audit"],
+  enabled() {
+    return !!(process.env.BUFFER_API_KEY && channels().length);
+  },
+  handles(post) {
+    return syndicationLocales().includes(post.locale);
+  },
+  async publish(post: ExternalPost): Promise<PublishResult | null> {
+    const apiKey = process.env.BUFFER_API_KEY!;
+    for (const ch of channels()) {
+      // X gets the tightest cut; LinkedIn gets near-full text.
+      const base =
+        ch.network === "x"
+          ? (post.variants?.short ?? post.text)
+          : ch.network === "threads"
+            ? (post.variants?.medium ?? post.variants?.short ?? post.text)
+            : post.text;
+      let text = clip(base, ch.limit - (post.url ? post.url.length + 2 : 0));
+      if (post.url && !text.includes(post.url)) text = `${text}\n${post.url}`;
+      await createPost(apiKey, ch.id, clip(text, ch.limit));
+    }
+    return null;
+  },
+};

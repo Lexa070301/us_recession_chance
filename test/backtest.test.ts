@@ -4,6 +4,7 @@ import { upsertObservations, getObservations } from "../src/data/repositories/ob
 import { getRecessionPeriods } from "../src/data/nber.js";
 import {
   detectEpisodes,
+  latestSource,
   monthAdd,
   monthEnd,
   monthIndex,
@@ -90,7 +91,7 @@ describe("signalBacktest (synthetic)", () => {
     expect(recessions).toHaveLength(1);
     expect(recessions[0].start).toBe("2003-06");
 
-    const bt = signalBacktest(signal, new SeriesCache(db), recessions, "2005-12");
+    const bt = signalBacktest(signal, latestSource(new SeriesCache(db)), recessions, "2005-12");
     expect(bt.episodes.length - bt.censored).toBe(1);
     expect(bt.hits).toBe(1);
     expect(bt.precision).toBe(1);
@@ -116,7 +117,7 @@ describe("signalBacktest (synthetic)", () => {
         params: { levels: [{ state: "warning", op: ">", threshold: 7 }] },
       },
     };
-    const bt = signalBacktest(signal, new SeriesCache(db), [], "2020-01");
+    const bt = signalBacktest(signal, latestSource(new SeriesCache(db)), [], "2020-01");
     expect(bt.censored).toBe(1);
     expect(bt.precision).toBeNull();
   });

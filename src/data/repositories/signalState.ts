@@ -56,6 +56,8 @@ export function getAllSignalStates(conn?: Database.Database): SignalStateRow[] {
 /**
  * Persist new state; if it differs from stored, also insert a signal_events
  * row and return its id (the SignalEvent). Returns null when nothing changed.
+ * opts.suppressEvent: update the state row but skip the event insert
+ * (rate-limit — the suppressed transition is marked in context_json instead).
  */
 export function transitionSignalState(
   signalKey: string,
@@ -68,6 +70,7 @@ export function transitionSignalState(
     context?: Record<string, unknown>;
   },
   conn?: Database.Database,
+  opts?: { suppressEvent?: boolean },
 ): number | null {
   const db = conn ?? getDb();
   const prev = getSignalState(signalKey, db);
@@ -94,7 +97,7 @@ export function transitionSignalState(
       next.context ? JSON.stringify(next.context) : null,
     );
 
-    if (prev.state === next.state) return null;
+    if (prev.state === next.state || opts?.suppressEvent) return null;
 
     const res = db
       .prepare(
@@ -111,6 +114,17 @@ export function getEvent(eventId: number, conn?: Database.Database): SignalEvent
   return db.prepare("SELECT * FROM signal_events WHERE id = ?").get(eventId) as
     | SignalEventRow
     | undefined;
+}
+
+/** Most recent event for a signal (rate-limit checks). */
+export function getLastEvent(
+  signalKey: string,
+  conn?: Database.Database,
+): SignalEventRow | undefined {
+  const db = conn ?? getDb();
+  return db
+    .prepare("SELECT * FROM signal_events WHERE signal_key = ? ORDER BY id DESC LIMIT 1")
+    .get(signalKey) as SignalEventRow | undefined;
 }
 
 export function getEventsSince(ts: string, conn?: Database.Database): SignalEventRow[] {
@@ -148,4 +162,29 @@ export function getLatestComposite(
   return db
     .prepare("SELECT score, bucket, prob_label, detail_json FROM composite_snapshots ORDER BY id DESC LIMIT 1")
     .get() as { score: number; bucket: string; prob_label: string; detail_json: string | null } | undefined;
+}
+
+export interface CompositeSnapshot {
+  score: number;
+  bucket: string;
+  prob_label: string;
+  detail_json: string | null;
+}
+
+/**
+ * Latest snapshot on/before `cutoff`. composite_snapshots.ts is written by
+ * datetime('now') → 'YYYY-MM-DD HH:MM:SS' — the caller must format the cutoff
+ * the same way (space, not ISO 'T'), or the lexical compare breaks.
+ */
+export function getCompositeAtOrBefore(
+  cutoff: string,
+  conn?: Database.Database,
+): CompositeSnapshot | undefined {
+  const db = conn ?? getDb();
+  return db
+    .prepare(
+      `SELECT score, bucket, prob_label, detail_json FROM composite_snapshots
+       WHERE ts <= ? ORDER BY ts DESC LIMIT 1`,
+    )
+    .get(cutoff) as CompositeSnapshot | undefined;
 }

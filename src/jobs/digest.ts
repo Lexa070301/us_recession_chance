@@ -2,14 +2,22 @@ import { getConfig, getChannelTargets } from "../config/load.js";
 import { getDb } from "../data/db.js";
 import {
   getAllSignalStates,
+  getCompositeAtOrBefore,
   getRecentEvents,
 } from "../data/repositories/signalState.js";
 import { enqueueDelivery } from "../data/repositories/deliveries.js";
+import { cardAlreadySent, markCardSent } from "../data/repositories/cards.js";
 import { getPrefs, listActiveUsers } from "../data/repositories/users.js";
 import { processDeliveries } from "../publish/publisher.js";
-import { renderDigest } from "../publish/render/templates.js";
+import { sendTelegramPhoto } from "../publish/adapters/telegram.js";
+import { renderDigest, renderWeeklyDashboard } from "../publish/render/templates.js";
+import { getSyndicationUrl } from "../publish/syndication/repo.js";
 import { computeComposite } from "../signals/score.js";
 import { computePooledProb } from "../signals/pooledProb.js";
+import { collectCardData, trendScores } from "../card/data.js";
+import { renderCard } from "../card/render.js";
+import { syndicatePosts } from "../publish/syndication/index.js";
+import { t } from "../publish/render/i18n.js";
 
 export type DigestKind = "daily" | "weekly";
 
@@ -58,17 +66,72 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
 
   const { events, states, composite } = buildDigestPayload(kind);
 
+  // Photo-first (PLAN2 §4/5): weekly digest card before the text post.
+  // Photos bypass the text-only outbox; dedup via card_sent_keys and
+  // per-channel isolation — a card failure never blocks the text digest.
+  // DM cards are out of scope for v1.
+  if (kind === "weekly" && process.env.CARD_ENABLED === "true") {
+    for (const ch of getChannelTargets()) {
+      if (cardAlreadySent(key, ch.chatId, db)) continue;
+      try {
+        const data = collectCardData(ch.locale, db);
+        const png = await renderCard(data);
+        await sendTelegramPhoto(ch.chatId, png, data.caption);
+        markCardSent(key, ch.chatId, db);
+      } catch (err) {
+        console.error(`[digest] card for ${ch.id} failed (text unaffected):`, err);
+      }
+    }
+  }
+
   const locales = new Set<string>([cfg.channels.defaults.fallback_locale]);
   for (const ch of getChannelTargets()) locales.add(ch.locale);
   for (const u of listActiveUsers(db)) locales.add(u.locale);
+  const fb = cfg.channels.defaults.fallback_locale;
+  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+  const siteLink = (loc: string) =>
+    siteUrl ? `${siteUrl}${loc === fb ? "" : `/${loc}`}` : undefined;
+
+  const isWeekly = kind === "weekly";
+  const trend = isWeekly ? trendScores(90, db) : [];
+  // WoW delta — cutoff formatted like composite_snapshots.ts writes it.
+  const prevScore = isWeekly
+    ? (getCompositeAtOrBefore(
+        new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 19).replace("T", " "),
+        db,
+      )?.score ?? null)
+    : null;
+
+  const renderFor = (loc: string, withPromo: boolean, links: { telegraph?: string } = {}) =>
+    isWeekly
+      ? renderWeeklyDashboard(
+          events, states, composite, trend, prevScore, loc, dateLabel,
+          { site: siteLink(loc), telegraph: links.telegraph },
+          withPromo ? promo : undefined,
+        )
+      : renderDigest(events, states, composite, loc, dateLabel, kind, withPromo ? promo : undefined);
+
+  // Weekly dashboard (PLAN2 §5): Telegraph pages go FIRST so the channel
+  // post can carry "read more" links. Other venues publish after the text.
+  if (isWeekly && process.env.SYNDICATION_ENABLED === "true") {
+    const prePosts = [...locales].map((loc) => ({
+      key,
+      kind: "weekly" as const,
+      locale: loc,
+      title: `${t(loc, "weekly.title", { week: dateLabel })}`,
+      text: renderFor(loc, false),
+      url: siteLink(loc),
+    }));
+    await syndicatePosts(prePosts, db, ["telegraph"]);
+  }
 
   const channelTexts = new Map<string, string>();
   const userTexts = new Map<string, string>();
   for (const loc of locales) {
-    channelTexts.set(loc, renderDigest(events, states, composite, loc, dateLabel, kind, promo));
-    userTexts.set(loc, renderDigest(events, states, composite, loc, dateLabel, kind));
+    const telegraph = isWeekly ? getSyndicationUrl("telegraph", loc, key, db) : undefined;
+    channelTexts.set(loc, renderFor(loc, true, { telegraph }));
+    userTexts.set(loc, renderFor(loc, false, { telegraph }));
   }
-  const fb = cfg.channels.defaults.fallback_locale;
 
   let enqueued = 0;
   for (const ch of getChannelTargets()) {
@@ -93,6 +156,22 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
 
   const res = await processDeliveries(db);
   console.log(`[digest] ${kind} enqueued=${enqueued} sent=${res.sent} failed=${res.failed}`);
+
+  // External venues (PLAN2 §3): SYNDICATION_ENABLED is set only in the GHA
+  // publishing environment — the server lacks the secrets, so even a bug
+  // can't double-post. Per-venue failures are isolated and fail-open.
+  if (process.env.SYNDICATION_ENABLED === "true") {
+    const posts = [...channelTexts.entries()].map(([loc, text]) => ({
+      key,
+      kind,
+      locale: loc,
+      title: text.split("\n")[0],
+      text,
+      url: siteLink(loc),
+    }));
+    const syn = await syndicatePosts(posts, db);
+    console.log(`[digest] syndication published=${syn.published} skipped=${syn.skipped} failed=${syn.failed}`);
+  }
 }
 
 /**
@@ -164,5 +243,12 @@ export async function jobDigestAuto(): Promise<void> {
     now.getUTCDay() === cfg.channels.defaults.weekly_digest_day_utc &&
     now.getUTCHours() * 60 + now.getUTCMinutes() >= wh * 60 + wm;
   await jobDigest("daily");
-  if (weeklyDue) await jobDigest("weekly");
+  if (weeklyDue) {
+    await jobDigest("weekly");
+    // Self-audit after the weekly digest — internally gated to the
+    // publication environment (SYNDICATION_ENABLED) so the server never
+    // double-posts (PLAN2 §6).
+    const { jobSelfAudit } = await import("./selfAudit.js");
+    await jobSelfAudit();
+  }
 }

@@ -9,10 +9,17 @@ interface FredObservation {
   value: string;
 }
 
-interface FredObservationsResponse {
-  observations?: FredObservation[];
+interface FredError {
   error_code?: number;
   error_message?: string;
+}
+
+interface FredObservationsResponse extends FredError {
+  observations?: FredObservation[];
+}
+
+interface FredVintagesResponse extends FredError {
+  vintage_dates?: string[];
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -58,6 +65,31 @@ export class FredClient {
     this.retryDelayMs = fred.retry_delay_ms;
   }
 
+  /** GET {path} with retries/rate-limiting; returns parsed JSON. */
+  private async request<T extends FredError>(path: string, params: URLSearchParams): Promise<T> {
+    params.set("api_key", this.apiKey);
+    params.set("file_type", "json");
+    const url = `${this.baseUrl}${path}?${params.toString()}`;
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      await this.limiter.acquire();
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+        if (res.status === 429 || res.status >= 500) {
+          throw new Error(`FRED HTTP ${res.status}`);
+        }
+        const data = (await res.json()) as T;
+        if (data.error_message) throw new Error(`FRED error: ${data.error_message}`);
+        return data;
+      } catch (err) {
+        lastError = err;
+        if (attempt < this.maxRetries) await sleep(this.retryDelayMs * (attempt + 1));
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  }
+
   /**
    * Fetch observations for a FRED series.
    * Pass vintageDates (YYYY-MM-DD) for ALFRED-mode vintage snapshots.
@@ -66,37 +98,64 @@ export class FredClient {
     seriesId: string,
     opts: { startDate?: string; endDate?: string; vintageDates?: string[] } = {},
   ): Promise<ObsRow[]> {
-    const params = new URLSearchParams({
-      series_id: seriesId,
-      api_key: this.apiKey,
-      file_type: "json",
-    });
+    const params = new URLSearchParams({ series_id: seriesId });
     if (opts.startDate) params.set("observation_start", opts.startDate);
     if (opts.endDate) params.set("observation_end", opts.endDate);
     if (opts.vintageDates?.length) params.set("vintage_dates", opts.vintageDates.join(","));
 
-    const url = `${this.baseUrl}/series/observations?${params.toString()}`;
+    const data = await this.request<FredObservationsResponse>("/series/observations", params);
+    return (data.observations ?? [])
+      .filter((o) => o.value !== ".")
+      .map((o) => ({ date: o.date, value: Number(o.value) }));
+  }
 
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      await this.limiter.acquire();
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-        if (res.status === 429 || res.status >= 500) {
-          throw new Error(`FRED HTTP ${res.status}`);
-        }
-        const data = (await res.json()) as FredObservationsResponse;
-        if (data.error_message) throw new Error(`FRED error: ${data.error_message}`);
+  /**
+   * All real vintage dates on which FRED stored a snapshot of the series
+   * (fred/series/vintagedates). One cheap call — used to build a
+   * monthly/quarterly backfill grid on actual release dates instead of
+   * guessing arbitrary dates that may precede ALFRED coverage.
+   */
+  async fetchVintageDates(seriesId: string): Promise<string[]> {
+    const data = await this.request<FredVintagesResponse>(
+      "/series/vintagedates",
+      new URLSearchParams({ series_id: seriesId }),
+    );
+    return data.vintage_dates ?? [];
+  }
 
-        return (data.observations ?? [])
-          .filter((o) => o.value !== ".")
-          .map((o) => ({ date: o.date, value: Number(o.value) }));
-      } catch (err) {
-        lastError = err;
-        if (attempt < this.maxRetries) await sleep(this.retryDelayMs * (attempt + 1));
-      }
+  /**
+   * ALFRED batch: one API call covering up to ~100 vintage dates. Response
+   * rows carry `realtime_start` = the vintage they belong to; each vintage
+   * group is upserted under observations.vintage_date = realtime_start.
+   */
+  async fetchVintageBatch(
+    seriesKey: string,
+    vintageDates: string[],
+    opts: { obsStart?: string } = {},
+  ): Promise<{ vintage: string; rows: number }[]> {
+    const def = getSeriesDef(seriesKey);
+    if (!def?.series_id) throw new Error(`Unknown or non-FRED series key: ${seriesKey}`);
+    const params = new URLSearchParams({
+      series_id: def.series_id,
+      vintage_dates: vintageDates.join(","),
+    });
+    if (opts.obsStart) params.set("observation_start", opts.obsStart);
+
+    const data = await this.request<FredObservationsResponse>("/series/observations", params);
+    const groups = new Map<string, ObsRow[]>();
+    for (const o of data.observations ?? []) {
+      if (o.value === ".") continue;
+      const g = groups.get(o.realtime_start) ?? [];
+      g.push({ date: o.date, value: Number(o.value) });
+      groups.set(o.realtime_start, g);
     }
-    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    const out: { vintage: string; rows: number }[] = [];
+    for (const [vintage, rows] of [...groups.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+      upsertObservations(seriesKey, rows, vintage);
+      out.push({ vintage, rows: rows.length });
+    }
+    logFetch(seriesKey, "success", out.reduce((s, r) => s + r.rows, 0));
+    return out;
   }
 
   /** Fetch + store one series; returns rows written. */

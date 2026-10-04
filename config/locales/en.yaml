@@ -13,6 +13,24 @@ bucket:
   high: "HIGH"
   severe: "SEVERE"
 
+card:
+  caption: "📊 Recession risk: {{bucket}} · score {{score}} · US Recession Watch"
+  nowcast_calm: "Nowcast: calm"
+  nowcast_active: "Nowcast: {{names}}"
+
+site:
+  title: "US Recession Watch"
+  subtitle: "12-month US recession risk"
+  score: "score"
+  model: "model"
+  nowcast: "Nowcast"
+  nowcast_calm: "calm"
+  active: "Active signals"
+  trend_90d: "score · 90 days"
+  updated: "updated"
+  bot: "Bot"
+  channel: "Channel"
+
 state_change:
   cleared: "cleared"
 
@@ -34,6 +52,10 @@ event:
   hist: "Accuracy: {{precision}}% ({{episodes}} episodes, {{sample}})"
   hist_short: "Accuracy: {{precision}}% ({{sample}})"
   hist_insufficient: "Limited history ({{sample}}) — statistics unreliable"
+  corroboration: "🔎 Backdrop: {{active}}/{{total}} signals active — {{label}}"
+  corroboration_isolated: "isolated so far"
+  corroboration_some: "partially corroborated"
+  corroboration_broad: "broad corroboration"
 
 composite:
   headline: "📊 Recession risk: {{bucket}}"
@@ -50,6 +72,38 @@ composite:
   nowcast: "⏱ Nowcast: {{status}}"
   nowcast_calm: "✅ calm"
   threshold_alert: "📊 Score {{score}} — crossed your alert threshold {{threshold}}"
+
+audit:
+  title: "🔍 Self-audit — {{week}}"
+  score_year: "Score 12m ago: {{score}} ({{bucket}}) → {{verdict}}"
+  verdict_hit: "a recession did begin within 12m ✅"
+  verdict_miss: "no recession within 12m ✅"
+  verdict_open: "outcome still open — until {{until}}"
+  no_snapshot: "Snapshot history starts {{date}} — earlier weeks: n/a"
+  signals_header: "Signal record (replay, latest data):"
+  line: "▸ {{name}} — {{episodes}} ep: {{hits}}✓ / {{fp}}✗{{pending}}"
+  pending_suffix: " · {{n}} open"
+  totals: "Totals: {{hits}} hit · {{fp}} false-positive · {{pending}} pending{{until}}"
+  open_until: " — earliest closes {{date}}"
+  method: "Methodology: an episode is a contiguous non-ok run (≥6 quiet months separates episodes); a hit means an NBER recession began within 12m of onset (nowcast: within −3/+6m). Data: FRED + NBER."
+
+episodes:
+  usage: "Usage: /episodes 2008 or /episodes 2007–2009 — add 'asof' for point-in-time data"
+  title: "🔎 Episodes {{range}} ({{mode}})"
+  mode_latest: "latest-revision data"
+  mode_asof: "point-in-time, as-of data"
+  nber: "NBER recession {{period}} — caught by {{caught}}/{{total}} forecast signals"
+  nber_none: "No NBER recession in this window."
+  signal_header: "Signal episodes overlapping the window:"
+  more: "  …{{n}} more"
+  quiet: "No signal episodes in this window."
+  note: "Note: {{mode}} — run with 'asof' to see what signals would have said in real time."
+
+weekly:
+  title: "📋 Weekly dashboard — {{week}}"
+  delta_wow: "WoW"
+  delta_flat: "≈ WoW"
+  read_more: "📖 Read more: {{links}}"
 
 digest:
   title: "📋 Daily recession-signal digest — {{date}}"
@@ -68,6 +122,7 @@ analytics:
   all_ok: "✅ All — OK"
   lead: "lead"
   insufficient: "limited history"
+  fred: "📚 Data: fred.stlouisfed.org — {{series}}"
 
 bot:
   start: |
@@ -112,12 +167,17 @@ bot:
     🔹 Nowcast vs forecast
     Forecast signals answer "will a recession come within 12m". Nowcast signals (Sahm rule, Chauvet–Piger) answer "has one already started" — they confirm onset with almost no lead and are shown in a separate section.
 
+    🔹 Sources — verify raw data on FRED:
+    fred.stlouisfed.org/series/UNRATE · /SAHMREALTIME · /T10Y3M · /ICSA · /PERMIT · /CFNAI — full series list: /analytics
+
     🔹 Plans
     Free: daily + weekly digest.
-    Plus: instant transition & nowcast alerts, watch-level signals, signal selection, custom score threshold, /analytics, custom digest time, digest toggles — /plan.
+    Plus: instant transition & nowcast alerts, watch-level signals, signal selection, custom score threshold, /analytics, /now, /episodes, custom digest time, digest toggles — /plan.
 
     ⚠️ Informational data only — not investment advice. Historical frequencies do not guarantee future results.
   status_empty: "No active warning signals."
+  now_events: "⚡ Last 24h:"
+  now_quiet: "⚡ Last 24h: no changes"
   settings_title: "⚙️ Settings"
   settings_delivery: "Delivery mode"
   delivery_instant: "Instant alerts"
@@ -137,6 +197,9 @@ bot:
   upgrade_hint: "🔓 Plus unlocks instant alerts, score threshold, nowcast & digest schedule — /plan"
   settings_updated: "Settings updated ✅"
   settings_plus_only: "🔒 Available on the Plus plan — /plan"
+  dashboard_text: "📊 Live dashboard — score, trend and nowcast:"
+  dashboard_button: "Open dashboard"
+  dashboard_unavailable: "Dashboard is not configured yet."
   signals_title: "📡 Signals (tap to toggle)"
   plan_title: "💎 Plus plan"
   plan_desc: |
@@ -245,6 +308,9 @@ signal:
   chauvet_piger:
     name: "Recession probability (Chauvet–Piger)"
     desc: "Smoothed probability of already being in recession."
+  sahm_states:
+    name: "Sahm — states"
+    desc: "Count of states whose unemployment crossed the Sahm trigger — experimental regional nowcast."
 
 series:
   yield_10y3m: "10Y–3M Treasury spread"

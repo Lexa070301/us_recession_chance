@@ -4,6 +4,7 @@ import { getConfig } from "../config/load.js";
 import {
   getAllSignalStates,
   getLatestComposite,
+  getRecentEvents,
 } from "../data/repositories/signalState.js";
 import { SEVERITY_ORDER, type SignalState } from "../data/repositories/signalState.js";
 import { getPrefs, getUser, savePrefs, setUserLocale } from "../data/repositories/users.js";
@@ -13,9 +14,15 @@ import {
   listRefundablePayments,
 } from "../data/repositories/subscriptions.js";
 import { findTier } from "./payments.js";
-import { computeComposite } from "../signals/score.js";
+import { bucketForScore, computeComposite } from "../signals/score.js";
+import { computePooledProb } from "../signals/pooledProb.js";
+import { parseEpisodesArgs, renderEpisodes } from "./episodes.js";
 import { t } from "../publish/render/i18n.js";
-import { renderAnalytics, renderStatus } from "../publish/render/templates.js";
+import {
+  renderAnalytics,
+  renderNow,
+  renderStatus,
+} from "../publish/render/templates.js";
 import { digestTimeMinutes } from "../jobs/digest.js";
 
 function locale(ctx: Context): string {
@@ -36,6 +43,18 @@ export async function cmdStart(ctx: Context): Promise<void> {
 
 export async function cmdGuide(ctx: Context): Promise<void> {
   await ctx.reply(t(locale(ctx), "bot.guide"));
+}
+
+/** /dashboard — open the Telegram Mini App hosted on GitHub Pages (§14). */
+export async function cmdDashboard(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+  if (!siteUrl) {
+    await ctx.reply(t(loc, "bot.dashboard_unavailable"));
+    return;
+  }
+  const kb = new InlineKeyboard().webApp(t(loc, "bot.dashboard_button"), `${siteUrl}/app/`);
+  await ctx.reply(t(loc, "bot.dashboard_text"), { reply_markup: kb });
 }
 
 export async function cmdStatus(ctx: Context): Promise<void> {
@@ -79,6 +98,38 @@ export async function cmdAnalytics(ctx: Context): Promise<void> {
     return;
   }
   await ctx.reply(renderAnalytics(getAllSignalStates(), locale(ctx)));
+}
+
+/** /now (PLAN2 §11): paid instant snapshot — status + last-24h transitions. */
+export async function cmdNow(ctx: Context): Promise<void> {
+  const user = getUser(ctx.from!.id);
+  if (user?.plan !== "plus") {
+    await ctx.reply(t(locale(ctx), "bot.settings_plus_only"));
+    return;
+  }
+  const states = getAllSignalStates();
+  const composite = computeComposite(
+    new Map(states.map((s) => [s.signal_key, s])),
+    getConfig().signals,
+  );
+  composite.modelProb = computePooledProb();
+  await ctx.reply(renderNow(states, composite, getRecentEvents(24), locale(ctx)));
+}
+
+/** /episodes 2008 [–2009] [asof] — paid historical episode search (§10). */
+export async function cmdEpisodes(ctx: Context): Promise<void> {
+  const loc = locale(ctx);
+  const user = getUser(ctx.from!.id);
+  if (user?.plan !== "plus") {
+    await ctx.reply(t(loc, "bot.settings_plus_only"));
+    return;
+  }
+  const args = parseEpisodesArgs(String(ctx.match ?? ""));
+  if (!args) {
+    await ctx.reply(t(loc, "episodes.usage"));
+    return;
+  }
+  await ctx.reply(renderEpisodes(args, loc));
 }
 
 /** /digest HH:MM — custom daily digest time (UTC), /digest off resets. */
@@ -134,10 +185,12 @@ function settingsKeyboard(ctx: Context): InlineKeyboard {
     kb.text(`${prefs.daily_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_daily_digest")}`, "set:digest_daily").row();
     kb.text(`${prefs.weekly_digest ? "✅" : "⬜"} ${t(loc, "bot.settings_weekly_digest")}`, "set:digest_weekly").row();
     kb.text(`${prefs.nowcast_alerts ? "✅" : "⬜"} ${t(loc, "bot.settings_nowcast")}`, "set:nowcast").row();
-    kb.text(
-      `${t(loc, "bot.settings_score_alert")}: ${prefs.score_threshold ?? t(loc, "bot.settings_score_off")}`,
-      "set:score",
-    ).row();
+    const th = prefs.score_threshold;
+    const thLabel =
+      th === null
+        ? t(loc, "bot.settings_score_off")
+        : `${th}+ · ${t(loc, `bucket.${bucketForScore(th)}`)}`;
+    kb.text(`${t(loc, "bot.settings_score_alert")}: ${thLabel}`, "set:score").row();
     kb.text(
       `${t(loc, "bot.settings_digest_time")}: ${prefs.digest_time ?? getConfig().channels.defaults.digest_time_utc}`,
       "set:digest_time",
@@ -235,7 +288,12 @@ export async function onCallbackQuery(ctx: Context): Promise<void> {
       return;
     }
     const prefs = getPrefs(userId);
-    const cycle: (number | null)[] = [null, 3, 5, 7, 9, 13];
+    // Cycle through bucket boundaries (PLAN2 §9): thresholds that mean
+    // something — off, then each band's min above zero.
+    const cycle: (number | null)[] = [
+      null,
+      ...getConfig().model.composite.bands.map((b) => b.min).filter((m) => m > 0),
+    ];
     const idx = cycle.indexOf(prefs.score_threshold);
     savePrefs(userId, { score_threshold: cycle[(idx + 1) % cycle.length] });
     await ctx.answerCallbackQuery({ text: t(loc, "bot.settings_updated") });

@@ -30,7 +30,12 @@ export class Panel {
     add(signal.input);
     const walk = (ev: EvaluatorDef) => {
       if ("branches" in ev) ev.branches.forEach(walk);
-      else if (ev.input) add(ev.input);
+      // sahm_states pulls 51 state series — they must count as inputs or
+      // latestObsDate won't notice state releases (the nyfed-inputs bug class).
+      if (ev.type === "sahm_states") {
+        for (const k of ev.params.keys) add({ key: k, transform: "sahm" });
+      }
+      if ("input" in ev && ev.input) add(ev.input);
     };
     walk(signal.evaluator);
     return [...refs.values()];

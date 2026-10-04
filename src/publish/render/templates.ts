@@ -33,7 +33,7 @@ export function formatValue(value: number | null, unit?: string): string {
 }
 
 /** Short localized unit suffix: "−0.42 п.п.", "4.2%", "245k". */
-function formatWithUnit(value: number | null, unit: string | undefined, locale: string): string {
+export function formatWithUnit(value: number | null, unit: string | undefined, locale: string): string {
   if (value === null || value === undefined) return "N/A";
   if (unit === "persons") {
     return value >= 1000 ? `${Math.round(value / 1000)}k` : String(Math.round(value));
@@ -112,7 +112,7 @@ function signalUnit(key: string): string | undefined {
   return def ? getSeriesDef(def.input.key)?.unit : undefined;
 }
 
-function splitByBlock(states: SignalStateRow[]): {
+export function splitByBlock(states: SignalStateRow[]): {
   forecast: SignalStateRow[];
   nowcast: SignalStateRow[];
 } {
@@ -125,7 +125,7 @@ function splitByBlock(states: SignalStateRow[]): {
 }
 
 /** "⏱ Nowcast: ✅ спокойно" or "⏱ Nowcast: 🚨 Правило Сэм 0.63". */
-function nowcastLine(nowcast: SignalStateRow[], locale: string): string {
+export function nowcastLine(nowcast: SignalStateRow[], locale: string): string {
   const status =
     nowcast.length === 0
       ? t(locale, "composite.nowcast_calm")
@@ -185,6 +185,22 @@ export function renderSignalEvent(
     if (hist) lines.push(hist);
   }
   if (composite) {
+    // Corroboration context (PLAN2 §8): how many signals back this event up.
+    const active = activeCount(composite);
+    const total = Object.keys(composite.detail).length;
+    const corrKey =
+      active <= 1
+        ? "event.corroboration_isolated"
+        : active <= 4
+          ? "event.corroboration_some"
+          : "event.corroboration_broad";
+    lines.push(
+      t(locale, "event.corroboration", {
+        active,
+        total,
+        label: t(locale, corrKey),
+      }),
+    );
     const p = composite.modelProb;
     lines.push(
       p === null || p === undefined
@@ -356,6 +372,126 @@ export function renderAnalytics(states: SignalStateRow[], locale: string): strin
   const defs = getConfig().signals;
   block(t(locale, "analytics.forecast"), defs.filter((d) => d.block !== "nowcast"));
   block(t(locale, "analytics.nowcast"), defs.filter((d) => d.block === "nowcast"));
+  // FRED source links (PLAN2 §13) — let users verify the raw data.
+  const seriesIds = [
+    ...new Set(
+      defs
+        .map((d) => getSeriesDef(d.input.key)?.series_id)
+        .filter((id): id is string => !!id),
+    ),
+  ];
+  lines.push(t(locale, "analytics.fred", { series: seriesIds.join(" · ") }));
   lines.push(t(locale, "bot.disclaimer_short"));
+  return lines.join("\n");
+}
+
+/** Unicode sparkline ▁▂▃▄▅▆▇ — adaptive range, fixed 0–14 fallback. */
+export function sparkline(values: number[], width = 14): string {
+  const pts = values.slice(-width);
+  if (!pts.length) return "";
+  const BARS = "▁▂▃▄▅▆▇";
+  let lo = Math.min(...pts);
+  let hi = Math.max(...pts);
+  if (hi - lo < 1) {
+    lo = 0;
+    hi = 14; // flat series → fixed composite scale keeps it honest
+  }
+  const span = hi - lo;
+  return pts
+    .map((v) => BARS[Math.max(0, Math.min(6, Math.round(((v - lo) / span) * 6)))])
+    .join("");
+}
+
+/** Week-over-week delta: "▲ +1.5" / "▼ −0.5" / "—" */
+export function deltaLabel(current: number, prev: number | null, locale: string): string {
+  if (prev === null) return "";
+  const d = current - prev;
+  if (Math.abs(d) < 0.05) return `· ${t(locale, "weekly.delta_flat")}`;
+  return `· ${d > 0 ? "▲" : "▼"} ${d > 0 ? "+" : ""}${d.toFixed(1)} ${t(locale, "weekly.delta_wow")}`;
+}
+
+/**
+ * Weekly dashboard post (PLAN2 §5): verdict + model + score WoW delta +
+ * sparkline + events + read-more links. Replaces renderDigest for the
+ * weekly channel post.
+ */
+export function renderWeeklyDashboard(
+  events: SignalEventRow[],
+  states: SignalStateRow[],
+  composite: CompositeResult,
+  trend: number[],
+  prevScore: number | null,
+  locale: string,
+  weekLabel: string,
+  links: { site?: string; telegraph?: string } = {},
+  botPromo?: string,
+): string {
+  const { forecast, nowcast } = splitByBlock(states);
+  const lines: string[] = [
+    t(locale, "weekly.title", { week: weekLabel }),
+    "",
+    headline(composite, locale),
+  ];
+
+  const score = composite.score.toFixed(1);
+  const p = composite.modelProb;
+  const delta = deltaLabel(composite.score, prevScore, locale);
+  lines.push(
+    (p === null || p === undefined
+      ? t(locale, "composite.risk_score", { score, prob: composite.probLabel })
+      : t(locale, "composite.risk_model", { prob: probBucketLabel(p), score })) +
+      (delta ? ` ${delta}` : ""),
+  );
+
+  const spark = sparkline(trend, 26);
+  if (spark) lines.push(spark);
+
+  if (events.length) {
+    lines.push("", t(locale, "digest.events_weekly"));
+    for (const ev of events) {
+      const unit = signalUnit(ev.signal_key);
+      lines.push(
+        `${STATE_ICON[ev.to_state]} ${signalName(ev.signal_key, locale)} → ${formatWithUnit(ev.value, unit, locale)}`,
+      );
+    }
+  }
+
+  if (forecast.length) {
+    lines.push(
+      "",
+      t(locale, "digest.active_compact", {
+        count: forecast.length,
+        list: compactList(forecast, locale),
+      }),
+    );
+  }
+
+  lines.push("", nowcastLine(nowcast, locale));
+
+  const more = [links.telegraph, links.site].filter(Boolean).join(" · ");
+  if (more) lines.push("", t(locale, "weekly.read_more", { links: more }));
+  if (botPromo) lines.push("", t(locale, "digest.bot_promo", { bot: botPromo }));
+  return lines.join("\n");
+}
+
+/** /now (PLAN2 §11): instant paid snapshot = status + last-24h transitions. */
+export function renderNow(
+  states: SignalStateRow[],
+  composite: CompositeResult,
+  events: SignalEventRow[],
+  locale: string,
+): string {
+  const lines = [renderStatus(states, composite, locale), ""];
+  if (events.length === 0) {
+    lines.push(t(locale, "bot.now_quiet"));
+  } else {
+    lines.push(t(locale, "bot.now_events"));
+    for (const ev of events.slice(0, 8)) {
+      const unit = signalUnit(ev.signal_key);
+      lines.push(
+        `${STATE_ICON[ev.to_state]} ${signalName(ev.signal_key, locale)} → ${formatWithUnit(ev.value, unit, locale)}`,
+      );
+    }
+  }
   return lines.join("\n");
 }

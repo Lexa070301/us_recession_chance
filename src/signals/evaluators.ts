@@ -284,6 +284,39 @@ export function evaluate(
       return evalChangeOverPeriod(getObs(ev.input), ev.params);
     case "yoy":
       return evalYoy(getObs(ev.input), ev.params, yoyPeriods);
+    case "sahm_states": {
+      // Regional nowcast (PLAN2 §7): count state UR series whose Sahm
+      // transform (MA3 − 12m min of MA3) exceeds the trigger. Experimental —
+      // states are noisier than the national rule; no hist stats.
+      const triggered: { key: string; val: number }[] = [];
+      let lastDate: string | null = null;
+      for (const key of ev.params.keys) {
+        const series = getObs({ key, transform: "sahm" });
+        const last = series[series.length - 1];
+        if (!last) continue;
+        if (!lastDate || last.date > lastDate) lastDate = last.date;
+        if (last.value >= ev.params.trigger) triggered.push({ key, val: last.value });
+      }
+      triggered.sort((a, b) => b.val - a.val);
+      const count = triggered.length;
+      const state: SignalState =
+        ev.params.critical_count !== undefined && count >= ev.params.critical_count
+          ? "critical"
+          : count >= ev.params.warn_count
+            ? "warning"
+            : "ok";
+      return {
+        state,
+        value: count,
+        since: state === "ok" ? null : lastDate,
+        context: {
+          count,
+          total: ev.params.keys.length,
+          trigger: ev.params.trigger,
+          top: triggered.slice(0, 3).map((s) => ({ key: s.key, val: Number(s.val.toFixed(2)) })),
+        },
+      };
+    }
     case "any_of": {
       const results = ev.branches.map((b) => evaluate(b, getObs, yoyPeriods, prev));
       const top = results.reduce<EvalResult>((acc, r) =>

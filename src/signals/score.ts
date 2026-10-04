@@ -32,3 +32,9 @@ export function computeComposite(
   const band = cfg.bands.find((b) => score >= b.min && score <= b.max) ?? cfg.bands[0];
   return { score, bucket: band.bucket, probLabel: band.prob_label, detail };
 }
+
+/** Bucket key for an arbitrary score — reused by the settings threshold UI. */
+export function bucketForScore(score: number): string {
+  const bands = getConfig().model.composite.bands;
+  return (bands.find((b) => score >= b.min && score <= b.max) ?? bands[0]).bucket;
+}

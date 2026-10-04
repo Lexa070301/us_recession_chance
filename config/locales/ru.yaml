@@ -13,6 +13,24 @@ bucket:
   high: "ВЫСОКИЙ"
   severe: "СИСТЕМНЫЙ"
 
+card:
+  caption: "📊 Риск рецессии: {{bucket}} · скор {{score}} · US Recession Watch"
+  nowcast_calm: "Ноукаст: спокойно"
+  nowcast_active: "Ноукаст: {{names}}"
+
+site:
+  title: "US Recession Watch"
+  subtitle: "Риск рецессии в США на 12 мес"
+  score: "скор"
+  model: "модель"
+  nowcast: "Ноукаст"
+  nowcast_calm: "спокойно"
+  active: "Активные сигналы"
+  trend_90d: "скор · 90 дней"
+  updated: "обновлено"
+  bot: "Бот"
+  channel: "Канал"
+
 state_change:
   cleared: "снят"
 
@@ -34,6 +52,10 @@ event:
   hist: "Точность: {{precision}}% ({{episodes}} эпизодов, {{sample}})"
   hist_short: "Точность: {{precision}}% ({{sample}})"
   hist_insufficient: "Мало истории ({{sample}}) — статистика ненадёжна"
+  corroboration: "🔎 Фон: активны {{active}}/{{total}} сигналов — {{label}}"
+  corroboration_isolated: "пока изолированно"
+  corroboration_some: "частично подтверждено"
+  corroboration_broad: "широкое подтверждение"
 
 composite:
   headline: "📊 Риск рецессии: {{bucket}}"
@@ -52,6 +74,38 @@ composite:
   nowcast_calm: "✅ спокойно"
   threshold_alert: "📊 Скор {{score}} — пересёк ваш порог {{threshold}}"
 
+audit:
+  title: "🔍 Самоаудит — {{week}}"
+  score_year: "Скор 12 мес назад: {{score}} ({{bucket}}) → {{verdict}}"
+  verdict_hit: "рецессия началась в течение 12 мес ✅"
+  verdict_miss: "рецессии в течение 12 мес не было ✅"
+  verdict_open: "исход ещё неизвестен — до {{until}}"
+  no_snapshot: "История снапшотов начинается с {{date}} — раньше: н/д"
+  signals_header: "Послужной список сигналов (replay, свежие данные):"
+  line: "▸ {{name}} — {{episodes}} эп: {{hits}}✓ / {{fp}}✗{{pending}}"
+  pending_suffix: " · {{n}} открыто"
+  totals: "Итого: {{hits}} попаданий · {{fp}} ложных · {{pending}} открытых{{until}}"
+  open_until: " — ближайшее окно закрывается {{date}}"
+  method: "Методология: эпизод — непрерывный период не-ok состояния (≥6 тихих месяцев разделяют эпизоды); попадание — рецессия NBER началась в течение 12 мес после начала (nowcast: −3/+6 мес). Данные: FRED + NBER."
+
+episodes:
+  usage: "Формат: /episodes 2008 или /episodes 2007–2009 — добавьте 'asof' для данных на тот момент"
+  title: "🔎 Эпизоды {{range}} ({{mode}})"
+  mode_latest: "последняя ревизия данных"
+  mode_asof: "данные по состоянию на тот момент (as-of)"
+  nber: "Рецессия NBER {{period}} — поймали {{caught}}/{{total}} прогнозных сигналов"
+  nber_none: "В этом окне рецессий NBER не было."
+  signal_header: "Эпизоды сигналов в окне:"
+  more: "  …ещё {{n}}"
+  quiet: "В этом окне эпизодов сигналов нет."
+  note: "Примечание: {{mode}} — добавьте 'asof', чтобы увидеть, что сигналы говорили в реальном времени."
+
+weekly:
+  title: "📋 Недельный дашборд — {{week}}"
+  delta_wow: "к нед. назад"
+  delta_flat: "≈ к нед. назад"
+  read_more: "📖 Подробнее: {{links}}"
+
 digest:
   title: "📋 Дневной дайджест сигналов рецессии — {{date}}"
   title_weekly: "📋 Недельный дайджест сигналов рецессии — {{date}}"
@@ -69,6 +123,7 @@ analytics:
   all_ok: "✅ Все — норма"
   lead: "лид"
   insufficient: "мало истории"
+  fred: "📚 Данные: fred.stlouisfed.org — {{series}}"
 
 bot:
   start: |
@@ -113,12 +168,17 @@ bot:
     🔹 Nowcast vs прогноз
     Прогнозные сигналы отвечают «будет ли рецессия за 12 мес». Nowcast (правило Сэм, Chauvet–Piger) — «не началась ли она уже»: подтверждают начало почти без опережения и выводятся отдельной секцией.
 
+    🔹 Источники — проверьте сырые данные на FRED:
+    fred.stlouisfed.org/series/UNRATE · /SAHMREALTIME · /T10Y3M · /ICSA · /PERMIT · /CFNAI — полный список рядов: /analytics
+
     🔹 Тарифы
     Free: дневной + недельный дайджест.
-    Plus: мгновенные алерты переходов и nowcast, уровень «наблюдение», выбор сигналов, свой порог скора, /analytics, своё время дайджеста, отключение дайджестов — /plan.
+    Plus: мгновенные алерты переходов и nowcast, уровень «наблюдение», выбор сигналов, свой порог скора, /analytics, /now, /episodes, своё время дайджеста, отключение дайджестов — /plan.
 
     ⚠️ Только информационные данные — не инвестиционная рекомендация. Исторические частоты не гарантируют будущих результатов.
   status_empty: "Активных предупреждающих сигналов нет."
+  now_events: "⚡ За 24 часа:"
+  now_quiet: "⚡ За 24 часа: без изменений"
   settings_title: "⚙️ Настройки"
   settings_delivery: "Режим доставки"
   delivery_instant: "Мгновенные алерты"
@@ -138,6 +198,9 @@ bot:
   upgrade_hint: "🔓 Plus открывает мгновенные алерты, порог скора, nowcast и расписание дайджеста — /plan"
   settings_updated: "Настройки обновлены ✅"
   settings_plus_only: "🔒 Доступно на тарифе Plus — /plan"
+  dashboard_text: "📊 Живой дашборд — скор, тренд и nowcast:"
+  dashboard_button: "Открыть дашборд"
+  dashboard_unavailable: "Дашборд пока не настроен."
   signals_title: "📡 Сигналы (нажмите для переключения)"
   plan_title: "💎 Тариф Plus"
   plan_desc: |
@@ -246,6 +309,9 @@ signal:
   chauvet_piger:
     name: "Вероятность рецессии (Chauvet–Piger)"
     desc: "Сглаженная вероятность того, что экономика уже в рецессии."
+  sahm_states:
+    name: "Сэм — штаты"
+    desc: "Число штатов, чья безработица пробила триггер Сэм — экспериментальный региональный ноукаст."
 
 series:
   yield_10y3m: "Спред 10Y–3M"

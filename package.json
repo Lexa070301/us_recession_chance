@@ -19,16 +19,22 @@
     "devsub": "tsx src/cli/devSubscription.ts",
     "digest": "tsx -e \"import 'dotenv/config'; import { jobDigest, jobDigestAuto } from './src/jobs/digest.ts'; (process.argv[1] === 'weekly' ? jobDigest('weekly') : jobDigestAuto())\"",
     "backtest": "tsx scripts/backtest.ts",
+    "vintages": "tsx src/cli/vintageBackfill.ts",
+    "card": "tsx src/cli/card.ts",
+    "site": "tsx src/cli/site.ts",
+    "menu-button": "tsx src/cli/menuButton.ts",
     "fit-model": "tsx scripts/fitModel.ts",
     "backup": "tsx src/cli/backup.ts",
     "health": "tsx -e \"import 'dotenv/config'; import { jobHealthcheck } from './src/jobs/health.ts'; jobHealthcheck()\""
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "better-sqlite3": "^12.4.1",
     "dotenv": "^17.2.3",
     "grammy": "^1.38.4",
     "i18next": "^25.6.0",
     "node-cron": "^4.2.1",
+    "satori": "^0.35.0",
     "yaml": "^2.8.1",
     "zod": "^4.1.12"
   },

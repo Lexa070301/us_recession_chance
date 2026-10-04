@@ -2,6 +2,70 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 10: PLAN2 roadmap — waves A–C)
+
+Full audited PLAN2.md implemented: 14 items, all waves.
+
+### Wave A — data integrity & UX
+
+- **ALFRED vintages**: delta-model storage (`observations.vintage_date`),
+  chunked `vintage_dates` fetch, `observationsAsOf` reconstruction
+  ("per date, latest vintage ≤ asOf"), `VintageSeriesCache` + `asofSource`
+  for point-in-time replay, `npm run vintages` backfill (~200k delta rows,
+  ~4.6k vintages), `backtest --vintage` compares latest vs as-of.
+  Key finding: FRED returns all intermediate deltas inside a
+  `vintage_dates` span — sparse grids lose nothing. As-of replay fixed to
+  trim non-vintage series by publication lag (was look-ahead).
+  Result: precision honestly degrades (chauvet_piger 0.89→0.50).
+- **Per-signal rate limiting**: `min_event_gap_hours` in signals.yaml;
+  transitions inside the gap are suppressed (state still updates),
+  escalations to `critical` always pass.
+- **PNG cards**: satori + resvg-js, 1200×630, full Inter TTFs (WOFF subsets
+  broke Cyrillic). `npm run card`, `CARD_ENABLED` gate, photo-first in
+  weekly digest, dedup via `card_sent_keys`, card failure never blocks text.
+- **Presets → buckets**: score-threshold cycle built from `model.yaml`
+  bands (`min > 0`), localized with bucket names. **`/now`**: verdict,
+  model prob, 24h delta, top signals, nowcast (Plus). FRED links in
+  /guide + /analytics; corroboration line on alerts.
+
+### Wave B — distribution
+
+- **GitHub Pages**: `src/site/` generator — localized index.html,
+  `data.{loc}.json` (zod-validated), Atom feeds. `npm run site`;
+  deploy job in monitor.yml (`environment: github-pages`).
+- **Syndication**: `src/publish/syndication/` — venue interface + repo
+  (`syndications` PK venue+locale+key), venues: Telegraph, RSS, Bluesky,
+  Mastodon, Discord, Reddit (own sub), Buffer (multiplexes X/Threads/
+  LinkedIn). Master gate `SYNDICATION_ENABLED` — set ONLY in GHA, the VPS
+  never has it (single-publishing-environment invariant).
+- **Weekly dashboard**: `renderWeeklyDashboard` — sparkline, week delta,
+  nowcast, Telegraph-first sequencing with read-more link injection.
+
+### Wave C — self-audit & new surfaces
+
+- **Self-audit** (`jobSelfAudit`): weekly, after digest; replays all
+  signals, classifies episodes hit/false-positive/pending vs NBER, caches
+  append-only, posts via outbox under `a:YYYY-Www` key.
+- **State Sahm nowcast**: `sahm` transform + `sahm_states` evaluator;
+  51 state/DC UR series (`ur_state_*`) in sources.yaml; warns ≥5,
+  critical ≥10 states over 0.5 trigger; `Panel.signalInputs` extended.
+- **`/episodes`**: Plus-gated historical search, `YYYY`/`YYYY–YYYY` +
+  optional `asof` flag (real point-in-time replay), NBER catch-rate per
+  window, 24h render cache.
+- **Telegram Mini App**: `web/app/` (vendored telegram-web-app.js, theme
+  via themeParams, locale via initDataUnsafe — display-only, no HMAC
+  needed for public data); renderSite copies to `site/app/`;
+  `/dashboard` command; `npm run menu-button` installs the web_app
+  menu button.
+
+### Ops notes
+
+- Workflow digest step now passes all syndication secrets + toggles.
+- `.env.example` documents CARD*ENABLED, SYNDICATION*\*, SITE_URL and all
+  venue credentials with "enable only in GHA" warnings.
+- Server must NOT have TG*CHANNEL*\* / SYNDICATION_ENABLED, or posts
+  double (separate SQLite = no shared dedup).
+
 ## 2026-10-05 (implementation pass 9: independent audit fixes)
 
 Independent audit verified against code; fixed items below.
@@ -235,10 +299,11 @@ immediately found real problems:
 
 ### TODO / known gaps
 
-- ALFRED vintage-aware backtest; wire calibrated bands/model into score.
+- ~~ALFRED vintage-aware backtest~~ — done in PLAN2 pass 10 (`--vintage`).
+- Wire calibrated bands/model into score (fit-model output still manual).
 - Stars e2e in Telegram test env; recurring invoices.
-- Release-calendar-aware refetch; GitHub Actions channel-only mode;
-  X adapter.
+- Release-calendar-aware refetch.
+- ~~X adapter~~ — via Buffer venue in PLAN2 pass 10.
 
 ## 2026-10-03 (implementation pass 1)
 
