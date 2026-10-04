@@ -40,6 +40,8 @@ site:
     Instant state-change alerts
     Per-signal analytics & history
     Episode search (/episodes)
+  cta_text: "This page updates when the site rebuilds — the bot messages you the moment a signal fires. Alerts and the weekly digest are free; Plus adds custom thresholds, quiet hours and point-in-time episode replays."
+  cta_button: "Get alerts in Telegram"
   method_link: "Methodology"
   audit_link: "Self-audit log"
   episodes_link: "Episodes"

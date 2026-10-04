@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { getDb } from "../data/db.js";
 import { t } from "../publish/render/i18n.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
  * Self-audit archive — public, linkable record of the weekly audit posts
@@ -45,6 +45,7 @@ export function auditIndexHtml(locale: string, opts: SitePageOpts, conn?: Databa
   const body = `<div class="prose">
   <h1>${esc(t(locale, "site.audit_title"))}</h1>
   ${list}
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 
@@ -83,6 +84,7 @@ export function auditWeekHtml(
   <h1>${esc(label)}</h1>
   <div class="when">${esc(t(locale, "site.audit_published"))} ${esc((row.sent_at ?? "").slice(0, 10))}</div>
   <pre>${esc(row.payload_text)}</pre>
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 

@@ -2,6 +2,19 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (site-wide bot CTA + signals index layout)
+
+- Shared `botCta()` banner rendered at the foot of every site page —
+  Telegram-blue gradient card: plane icon, "Personal alerts in the bot"
+  title, a line explaining the site lags the bot, and a pill button to
+  t.me/<bot>. Homepage passes its benefit list as the banner's extra
+  block. Replaces the old muted `.cta` box; skipped on the Mini App
+  shell and episode redirect stubs.
+- `/signals/` index rows now flex (name left, tabular-num value right)
+  instead of value glued to the link text.
+- New locale keys: `site.cta_text`, `site.cta_button` (en/ru);
+  `site.cta_title`/`cta_items` reused.
+
 ## 2026-10-05 (content SEO: site grows to ~110 pages)
 
 Editorial content layer added on top of the data pages — every page

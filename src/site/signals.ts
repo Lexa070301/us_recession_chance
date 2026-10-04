@@ -5,7 +5,7 @@ import { getDb } from "../data/db.js";
 import { t } from "../publish/render/i18n.js";
 import { buildDashboardData } from "./dataJson.js";
 import { evalJson } from "./method.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
  * Per-signal pages (SEO): current state/value, plain-language description,
@@ -50,13 +50,14 @@ export function signalsIndexHtml(
           `<span class="val">${esc(cur?.value ?? "")}</span></li>`;
       })
       .join("");
-    return `<h3>${esc(t(locale, `site.block_${block}`))}</h3><ul class="audit-list">${items}</ul>`;
+    return `<h3>${esc(t(locale, `site.block_${block}`))}</h3><ul class="audit-list sig-index">${items}</ul>`;
   }).join("\n");
 
   const body = `<div class="prose">
   <h1>${esc(t(locale, "site.signals_title"))}</h1>
   <p>${esc(t(locale, "site.signals_intro"))}</p>
   ${blocks}
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 
@@ -93,6 +94,7 @@ function signalPageHtml(
   <h3>${esc(t(locale, "site.method_rule"))}</h3>
   <pre>${esc(evalJson(def.evaluator))}</pre>
   ${fred ? `<p><a href="${esc(fred)}">${esc(t(locale, "site.signal_source"))} →</a></p>` : ""}
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.signals_title"))}</a> · <a href="../../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 

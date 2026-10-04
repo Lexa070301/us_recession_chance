@@ -3,7 +3,7 @@ import { getDb } from "../data/db.js";
 import { t } from "../publish/render/i18n.js";
 import { scoreScaleMax } from "../signals/score.js";
 import { renderArticleBody } from "./articles.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
  * /history/ — full composite-score record. Snapshots accumulate one per
@@ -65,6 +65,7 @@ export function historyHtml(
   ${bars}
   <h3>${esc(t(locale, "site.history_recent"))}</h3>
   ${rows ? `<table class="sig-table">${rows}</table>` : `<p>${esc(t(locale, "site.history_empty"))}</p>`}
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 

@@ -1,7 +1,7 @@
 import { getConfig, getSeriesDef } from "../config/load.js";
 import type { EvaluatorDef, SignalDef } from "../config/schema.js";
 import { t } from "../publish/render/i18n.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 const FRED_SERIES = "https://fred.stlouisfed.org/series/";
 
@@ -81,6 +81,7 @@ export function methodHtml(locale: string, opts: SitePageOpts): string {
   ${paragraphs(t(locale, "site.method_data_text"))}
 
   <div class="disclaimer">${esc(t(locale, "site.disclaimer"))}</div>
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 

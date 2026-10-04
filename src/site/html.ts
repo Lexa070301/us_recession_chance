@@ -46,10 +46,18 @@ const BASE_CSS = `
   .sig-table .val { color: #94a3b8; white-space: nowrap; text-align: right; }
   .sig-table .st { color: #64748b; font-size: 12px; text-align: right; white-space: nowrap; }
   .sig-table .st.hdr { text-align: left; letter-spacing: 1px; text-transform: uppercase; font-size: 11px; padding-top: 18px; }
-  .cta { background: #16233b; border-radius: 12px; padding: 20px 22px; margin-top: 44px; }
-  .cta h2 { margin: 0 0 10px; }
-  .cta ul { margin: 0; padding-left: 18px; color: #94a3b8; font-size: 14px; line-height: 1.8; }
-  .cta .go { display: inline-block; margin-top: 14px; }
+  .tgcta { margin: 44px 0 0; border-radius: 14px; padding: 22px; display: flex; gap: 18px;
+    background: linear-gradient(135deg, rgba(42,171,238,.18), rgba(42,171,238,.04) 65%), #16233b;
+    border: 1px solid rgba(42,171,238,.45); }
+  .tgcta-icon { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; background: #2aabee; display: flex; align-items: center; justify-content: center; }
+  .tgcta-icon svg { width: 22px; height: 22px; }
+  .tgcta-title { font-weight: 700; font-size: 16px; }
+  .tgcta-text { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-top: 6px; }
+  .tgcta-items { margin: 10px 0 0; padding-left: 18px; color: #94a3b8; font-size: 14px; line-height: 1.8; }
+  .tgcta-btn { display: inline-block; margin-top: 14px; background: #2aabee; color: #fff; font-weight: 700; font-size: 15px; padding: 10px 22px; border-radius: 999px; }
+  .tgcta-btn:hover { background: #1d9ad9; text-decoration: none; }
+  .sig-index li { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+  .sig-index .val { color: #94a3b8; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .prose p { color: #94a3b8; font-size: 15px; line-height: 1.7; margin: 14px 0; }
   .prose h1 { font-size: 34px; margin-bottom: 8px; }
   .prose h3 { font-size: 16px; margin: 26px 0 6px; color: #e5e7eb; }
@@ -182,6 +190,25 @@ ${langNav ? `<footer style="border:none;margin-top:24px;padding-top:0">${langNav
 </html>`;
 }
 
+const TG_PLANE =
+  `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>`;
+
+/** Telegram bot CTA banner — conversion element shared by every site page.
+ * Extra block (e.g. the homepage benefit list) goes between text and button. */
+export function botCta(locale: string, bot?: string, extra = ""): string {
+  if (!bot) return "";
+  const link = `https://t.me/${esc(bot)}`;
+  return `<div class="tgcta">
+  <div class="tgcta-icon">${TG_PLANE}</div>
+  <div>
+    <div class="tgcta-title">${esc(t(locale, "site.cta_title"))}</div>
+    <div class="tgcta-text">${esc(t(locale, "site.cta_text"))}</div>
+    ${extra}
+    <a class="tgcta-btn" href="${link}">${esc(t(locale, "site.cta_button"))} — @${esc(bot)}</a>
+  </div>
+</div>`;
+}
+
 function sparkbars(trend: [string, number][], accent: string): string {
   const max = scoreScaleMax();
   const pts = trend.slice(-60).map((p) => p[1]);
@@ -239,6 +266,7 @@ export function indexHtml(
     .map((s) => `<li>${esc(s)}</li>`)
     .join("");
   const botLink = opts.bot ? `https://t.me/${esc(opts.bot)}` : null;
+  const ctaExtra = ctaItems ? `<ul class="tgcta-items">${ctaItems}</ul>` : "";
 
   const body = `
   <header><span>${esc(L.title.toUpperCase())}</span><span class="date">${esc(d.generated_at.slice(0, 10))}</span></header>
@@ -256,15 +284,7 @@ export function indexHtml(
     ${nowcastRows ? `<tr><td class="st hdr" colspan="3">${esc(L.nowcast)}</td></tr>${nowcastRows}` : ""}
   </table>
 
-  ${
-    botLink
-      ? `<div class="cta">
-    <h2>${esc(L.cta_title)}</h2>
-    <ul>${ctaItems}</ul>
-    <a class="go" href="${botLink}">@${esc(opts.bot!)} →</a>
-  </div>`
-      : ""
-  }
+  ${botCta(locale, opts.bot, ctaExtra)}
 
   <footer>
     <span>${esc(L.updated)}: ${esc(updated)} UTC</span>

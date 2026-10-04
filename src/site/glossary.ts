@@ -1,6 +1,6 @@
 import { t } from "../publish/render/i18n.js";
 import { renderArticleBody } from "./articles.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
  * Glossary pages (SEO long-tail): plain-language explainers for the
@@ -27,6 +27,7 @@ export function glossaryIndexHtml(locale: string, opts: SitePageOpts): string {
   <h1>${esc(t(locale, "site.glossary_title"))}</h1>
   <p>${esc(t(locale, "site.glossary_intro"))}</p>
   <ul class="audit-list">${list}</ul>
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 
@@ -46,6 +47,7 @@ function termHtml(
   const body = `<div class="prose">
   <h1>${esc(title)}</h1>
   ${renderArticleBody(t(locale, `glossary.${key}.body`))}
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.glossary_title"))}</a> · <a href="../../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 

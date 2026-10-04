@@ -3,7 +3,7 @@ import { getDb } from "../data/db.js";
 import { t } from "../publish/render/i18n.js";
 import { episodeWindow } from "../bot/episodes.js";
 import { renderArticleBody } from "./articles.js";
-import { esc, pageShell, type SitePageOpts } from "./html.js";
+import { esc, pageShell, botCta, type SitePageOpts } from "./html.js";
 
 /**
  * Static episode pages (SEO long-tail): one page per NBER recession in our
@@ -77,6 +77,7 @@ export function episodesIndexHtml(locale: string, opts: SitePageOpts): string {
   <h1>${esc(t(locale, "site.episodes_title"))}</h1>
   <p>${esc(t(locale, "site.episodes_intro"))}</p>
   <ul class="audit-list">${list}</ul>
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 
@@ -123,6 +124,7 @@ function episodePageHtml(
   <article class="episode-article">
     ${article}
   </article>
+  ${botCta(locale, opts.bot)}
   <p><a href="../">${esc(t(locale, "site.episodes_title"))}</a> · <a href="../../">${esc(t(locale, "site.back"))}</a></p>
 </div>`;
 
