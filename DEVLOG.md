@@ -13,10 +13,12 @@ ELEVATED". Null when already in the top band.
 - Applied to: daily digest + /status + /now (`modelScoreLines`), weekly
   dashboard, PNG card (`CardData.scoreNext`), site (`data.score_next`),
   Mini App (app.js reads the same field).
-- Also fixed /paysupport silence: empty payments list serialized
-  inline_keyboard as `[[]]` which Telegram rejects — reply_markup is
-  only attached when buttons exist, and bot.catch now surfaces handler
-  failures to the user instead of logging-only.
+- Also fixed /paysupport — twice. Empty payments list serialized
+  inline_keyboard as `[[]]` which Telegram rejects (reply_markup is now
+  only attached when buttons exist; bot.catch surfaces handler failures
+  instead of logging-only). Then BUTTON_DATA_INVALID: `refund:*` +
+  charge_id exceeds the 64-byte callback_data limit — refund callbacks
+  now carry the payments rowid and resolve charge_id inside the handler.
 
 ## 2026-10-04 (implementation pass 16: event-gated daily syndication)
 

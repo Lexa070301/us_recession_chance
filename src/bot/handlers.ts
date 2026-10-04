@@ -383,7 +383,7 @@ export async function cmdPaySupport(ctx: Context): Promise<void> {
   for (const p of payments) {
     kb.text(
       t(loc, "bot.refund_item", { stars: p.stars_amount, date: p.paid_at.slice(0, 10) }),
-      `refund:req:${p.charge_id}`,
+      `refund:req:${p.rowid}`,
     ).row();
   }
   const text =

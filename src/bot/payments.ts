@@ -4,7 +4,7 @@ import { getConfig } from "../config/load.js";
 import {
   activateSubscription,
   applyRefund,
-  getPayment,
+  getPaymentByRowid,
   listRefundablePayments,
   recordPayment,
 } from "../data/repositories/subscriptions.js";
@@ -67,18 +67,18 @@ export async function onSuccessfulPayment(ctx: Context): Promise<void> {
   await ctx.reply(t(locale, "bot.plan_thanks", { until }));
 }
 
-/** Callback `refund:req:<charge_id>` — confirm screen. */
-export async function onRefundRequest(ctx: Context, chargeId: string): Promise<void> {
+/** Callback `refund:req:<rowid>` — confirm screen (charge_id is too long for callback_data). */
+export async function onRefundRequest(ctx: Context, rowidStr: string): Promise<void> {
   const loc = locale(ctx);
   const userId = ctx.from!.id;
-  const pay = getPayment(chargeId);
+  const pay = getPaymentByRowid(Number(rowidStr));
 
   if (!pay || pay.user_id !== userId || pay.refund_at !== null) {
     await ctx.answerCallbackQuery({ text: t(loc, "bot.refund_unavailable"), show_alert: true });
     return;
   }
   const kb = new InlineKeyboard()
-    .text(t(loc, "bot.refund_yes", { stars: pay.stars_amount }), `refund:yes:${chargeId}`)
+    .text(t(loc, "bot.refund_yes", { stars: pay.stars_amount }), `refund:yes:${pay.rowid}`)
     .row()
     .text(t(loc, "bot.refund_no"), "refund:no");
   await ctx.answerCallbackQuery();
@@ -92,13 +92,13 @@ export async function onRefundRequest(ctx: Context, chargeId: string): Promise<v
   );
 }
 
-/** Callback `refund:yes:<charge_id>` — executes the Stars refund. */
-export async function onRefundConfirm(ctx: Context, chargeId: string): Promise<void> {
+/** Callback `refund:yes:<rowid>` — executes the Stars refund. */
+export async function onRefundConfirm(ctx: Context, rowidStr: string): Promise<void> {
   const loc = locale(ctx);
   const userId = ctx.from!.id;
   const windowDays = getConfig().model.subscription.refund_window_days;
   const refundable = listRefundablePayments(userId, windowDays);
-  const pay = refundable.find((p) => p.charge_id === chargeId);
+  const pay = refundable.find((p) => p.rowid === Number(rowidStr));
 
   if (!pay) {
     await ctx.answerCallbackQuery({ text: t(loc, "bot.refund_unavailable"), show_alert: true });
@@ -106,7 +106,7 @@ export async function onRefundConfirm(ctx: Context, chargeId: string): Promise<v
   }
 
   try {
-    await ctx.api.refundStarPayment(userId, chargeId);
+    await ctx.api.refundStarPayment(userId, pay.charge_id);
   } catch (err) {
     console.error("refundStarPayment failed:", err);
     await ctx.answerCallbackQuery({ text: t(loc, "bot.refund_failed"), show_alert: true });
@@ -116,9 +116,9 @@ export async function onRefundConfirm(ctx: Context, chargeId: string): Promise<v
   // Telegram already returned the Stars — bookkeeping must not fail silently.
   let res: ReturnType<typeof applyRefund>;
   try {
-    res = applyRefund(chargeId);
+    res = applyRefund(pay.charge_id);
   } catch (err) {
-    console.error(`refund bookkeeping failed for ${chargeId} (Stars already refunded):`, err);
+    console.error(`refund bookkeeping failed for ${pay.charge_id} (Stars already refunded):`, err);
     res = "unknown";
   }
   const expiresAt = res === "already_refunded" || res === "unknown" ? null : res.expiresAt;

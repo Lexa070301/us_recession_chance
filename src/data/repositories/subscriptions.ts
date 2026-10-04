@@ -46,6 +46,9 @@ export function activateSubscription(
 }
 
 export interface PaymentRow {
+  /** Surrogate id used in callback_data — charge_id exceeds Telegram's
+   *  64-byte callback_data limit (`refund:req:` + charge_id > 64). */
+  rowid: number;
   charge_id: string;
   user_id: number;
   stars_amount: number;
@@ -56,7 +59,14 @@ export interface PaymentRow {
 
 export function getPayment(chargeId: string, conn?: Database.Database): PaymentRow | undefined {
   const db = conn ?? getDb();
-  return db.prepare("SELECT * FROM payments WHERE charge_id = ?").get(chargeId) as
+  return db.prepare("SELECT rowid, * FROM payments WHERE charge_id = ?").get(chargeId) as
+    | PaymentRow
+    | undefined;
+}
+
+export function getPaymentByRowid(rowid: number, conn?: Database.Database): PaymentRow | undefined {
+  const db = conn ?? getDb();
+  return db.prepare("SELECT rowid, * FROM payments WHERE rowid = ?").get(rowid) as
     | PaymentRow
     | undefined;
 }
@@ -70,7 +80,7 @@ export function listRefundablePayments(
   const db = conn ?? getDb();
   return db
     .prepare(
-      `SELECT * FROM payments
+      `SELECT rowid, * FROM payments
        WHERE user_id = ? AND refund_at IS NULL
          AND paid_at >= datetime('now', ?)
        ORDER BY paid_at DESC`,
