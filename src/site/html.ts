@@ -121,12 +121,20 @@ ${opts.description ? `<meta property="og:description" content="${esc(opts.descri
         ],
       })}</script>`
     : "";
+  // Home page of each locale. With siteUrl → absolute (Pages hosts under a
+  // project path, so bare "/ru/" would escape the repo subdir). Without it →
+  // relative ("ru/" from root, "../" from a locale subpage).
+  const homeHref = (l: string): string => {
+    if (siteUrl) return l === fallback ? `${siteUrl}/` : `${siteUrl}/${l}/`;
+    if (l === locale) return "./";
+    return l === fallback ? "../" : `${l}/`;
+  };
   const langNav =
     locales.length > 1
       ? `<span class="lang">${locales
           .map(
             (l) =>
-              `<a class="${l === locale ? "on" : "off"}" href="${l === fallback ? "/" : `/${l}/`}">${l.toUpperCase()}</a>`,
+              `<a class="${l === locale ? "on" : "off"}" href="${esc(homeHref(l))}">${l.toUpperCase()}</a>`,
           )
           .join(" · ")}</span>`
       : "";

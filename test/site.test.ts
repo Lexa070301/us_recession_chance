@@ -69,6 +69,9 @@ describe("site", () => {
     const ruHtml = readFileSync(join(out, "ru", "index.html"), "utf8");
     expect(ruHtml).toContain("../feed-ru.xml");
     expect(ruHtml).toContain('hreflang="en"');
+    // lang toggle must stay inside the project subpath (not bare "/ru/")
+    expect(html).toContain('href="https://example.test/site/ru/"');
+    expect(ruHtml).toContain('href="https://example.test/site/"');
     // feeds are well-formed XML with required author element (audit F10)
     const feed = readFileSync(join(out, "feed-en.xml"), "utf8");
     expect(feed).toContain("<feed");
