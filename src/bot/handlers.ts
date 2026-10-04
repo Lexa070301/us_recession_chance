@@ -389,7 +389,9 @@ export async function cmdPaySupport(ctx: Context): Promise<void> {
   const text =
     t(loc, "bot.paysupport", { refund_days: cfg.refund_window_days }) +
     (payments.length ? "" : `\n\n${t(loc, "bot.refund_none")}`);
-  await ctx.reply(text, { reply_markup: kb });
+  // No payments → empty keyboard serializes as inline_keyboard:[[]], which
+  // Telegram rejects — the reply throws and the user sees silence (bug).
+  await ctx.reply(text, payments.length ? { reply_markup: kb } : {});
 }
 
 // ------------------------------------------------------------------

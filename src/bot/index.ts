@@ -1,6 +1,7 @@
 import { Bot } from "grammy";
 import { getConfig } from "../config/load.js";
-import { upsertUser } from "../data/repositories/users.js";
+import { getUser, upsertUser } from "../data/repositories/users.js";
+import { t } from "../publish/render/i18n.js";
 import {
   cmdAnalytics,
   cmdDigest,
@@ -92,8 +93,18 @@ export function createBot(): Bot {
   bot.on("pre_checkout_query", onPreCheckout);
   bot.on("message:successful_payment", onSuccessfulPayment);
 
-  bot.catch((err) => {
+  bot.catch(async (err) => {
     console.error("Bot error:", err.error ?? err);
+    // Surface handler failures to the user — silent catch made the
+    // empty-keyboard /paysupport bug invisible ("nothing happens").
+    try {
+      const loc =
+        err.ctx.from?.id != null
+          ? (getUser(err.ctx.from.id)?.locale ??
+            getConfig().channels.defaults.fallback_locale)
+          : getConfig().channels.defaults.fallback_locale;
+      await err.ctx.reply(t(loc, "bot.error_generic"));
+    } catch { /* reply itself failed — nothing more we can do */ }
   });
 
   return bot;
