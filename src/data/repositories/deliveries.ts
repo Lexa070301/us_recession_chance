@@ -11,6 +11,7 @@ export interface DeliveryRow {
   status: "pending" | "sent" | "failed";
   attempts: number;
   payload_text: string | null;
+  link_preview_url: string | null;
 }
 
 /**
@@ -25,20 +26,22 @@ export function enqueueDelivery(
     targetId: string;
     locale: string;
     payloadText: string;
+    /** URL for Telegram's link preview (weekly digest → site og:image card). */
+    linkPreviewUrl?: string;
   },
   conn?: Database.Database,
 ): number {
   const db = conn ?? getDb();
   const res = db
     .prepare(
-      `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO deliveries (event_id, digest_key, target_type, target_id, locale, payload_text, link_preview_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        -- target the dedup index explicitly: a bare ON CONFLICT would
        -- silently swallow ANY future constraint violation (audit L8)
        ON CONFLICT (digest_key, target_type, target_id) WHERE digest_key IS NOT NULL
        DO NOTHING`,
     )
-    .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText);
+    .run(d.eventId ?? null, d.digestKey ?? null, d.targetType, d.targetId, d.locale, d.payloadText, d.linkPreviewUrl ?? null);
   return res.changes ? Number(res.lastInsertRowid) : 0;
 }
 

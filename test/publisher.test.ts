@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb, getDb, setDb } from "../src/data/db.js";
-import { pendingDeliveries } from "../src/data/repositories/deliveries.js";
+import { enqueueDelivery, pendingDeliveries } from "../src/data/repositories/deliveries.js";
 import type { SignalEventRow, SignalState } from "../src/data/repositories/signalState.js";
 import { savePrefs, setUserPlan, upsertUser } from "../src/data/repositories/users.js";
 import { routeCompositeAlerts, routeEvent } from "../src/publish/publisher.js";
@@ -89,5 +89,34 @@ describe("composite threshold alerts", () => {
     expect(routeCompositeAlerts(4.5, composite)).toBe(0);
     plusUser(2); // no threshold set
     expect(routeCompositeAlerts(4.5, composite)).toBe(0);
+  });
+});
+
+describe("delivery link preview", () => {
+  beforeEach(() => {
+    setDb(createTestDb());
+  });
+
+  it("persists link_preview_url through the outbox; null by default", () => {
+    enqueueDelivery({
+      digestKey: "w:2099-W01",
+      targetType: "channel",
+      targetId: "@ch",
+      locale: "en",
+      payloadText: "Weekly digest — https://example.github.io/repo",
+      linkPreviewUrl: "https://example.github.io/repo",
+    });
+    enqueueDelivery({
+      digestKey: "d:2099-01-01",
+      targetType: "channel",
+      targetId: "@ch2",
+      locale: "en",
+      payloadText: "Daily digest",
+    });
+    const out = pendingDeliveries();
+    expect(out.find((d) => d.target_id === "@ch")!.link_preview_url).toBe(
+      "https://example.github.io/repo",
+    );
+    expect(out.find((d) => d.target_id === "@ch2")!.link_preview_url).toBeNull();
   });
 });

@@ -111,7 +111,7 @@ export async function processDeliveries(conn?: Database.Database): Promise<{ sen
   for (const d of queue) {
     try {
       if (!d.payload_text) throw new Error("empty payload_text");
-      await sendTelegramMessage(d.target_id, d.payload_text);
+      await sendTelegramMessage(d.target_id, d.payload_text, d.link_preview_url ?? undefined);
       markSent(d.id, db);
       sent++;
     } catch (err) {

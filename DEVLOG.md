@@ -2,6 +2,27 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (implementation pass 15: weekly digest → single post w/ link preview)
+
+Telegram caption limit (1024) forced the photo + text two-message flow.
+`sendMessage` supports `link_preview_options` — a text post (≤4096) can
+render the site page's og:image (card.png) as a large preview, so the
+weekly digest becomes ONE message when SITE_URL is set.
+
+- **Deliveries `link_preview_url` column** (migration 0005) — per-delivery
+  preview URL survives retries through the outbox; NULL = preview
+  disabled (unchanged behavior for daily/alerts/audit).
+- **`sendTelegramMessage(chatId, text, previewUrl?)`** — sets
+  `prefer_large_media` + `show_above_text`; fallback keeps
+  `is_disabled: true` everywhere else.
+- **Digest** — weekly enqueues (channels, DMs, custom-time DMs) carry
+  `siteLink(locale)` as preview URL; the photo-first card path now runs
+  only when SITE_URL is unset (no-site deployments keep two posts).
+- Weekly text already contains the site URL in `weekly.read_more`, so
+  the preview URL always matches a link in the message (Telegram
+  requirement). Telegraph's URL still appears first — explicit `url`
+  param selects the site for the image.
+
 ## 2026-10-05 (implementation pass 14: site as a landing + rebrand)
 
 Site's role clarified: public trust + discovery funnel — "what the

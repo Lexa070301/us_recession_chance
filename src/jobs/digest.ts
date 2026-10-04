@@ -65,12 +65,14 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
   console.log(`[digest] building ${kind} — ${now.toISOString()}`);
 
   const { events, states, composite } = buildDigestPayload(kind);
+  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
 
   // Photo-first (PLAN2 §4/5): weekly digest card before the text post.
-  // Photos bypass the text-only outbox; dedup via card_sent_keys and
-  // per-channel isolation — a card failure never blocks the text digest.
-  // DM cards are out of scope for v1.
-  if (kind === "weekly" && process.env.CARD_ENABLED === "true") {
+  // Only when SITE_URL is unset — with a site, the weekly text post carries
+  // a link preview rendering card.png instead (single message). Photos
+  // bypass the text-only outbox; dedup via card_sent_keys and per-channel
+  // isolation — a card failure never blocks the text digest.
+  if (kind === "weekly" && process.env.CARD_ENABLED === "true" && !siteUrl) {
     for (const ch of getChannelTargets()) {
       if (cardAlreadySent(key, ch.chatId, db)) continue;
       try {
@@ -88,7 +90,6 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
   for (const ch of getChannelTargets()) locales.add(ch.locale);
   for (const u of listActiveUsers(db)) locales.add(u.locale);
   const fb = cfg.channels.defaults.fallback_locale;
-  const siteUrl = (process.env.SITE_URL ?? "").replace(/\/$/, "");
   const siteLink = (loc: string) =>
     siteUrl ? `${siteUrl}${loc === fb ? "" : `/${loc}`}` : undefined;
 
@@ -136,7 +137,16 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
   let enqueued = 0;
   for (const ch of getChannelTargets()) {
     enqueued += enqueueDelivery(
-      { digestKey: key, targetType: "channel", targetId: ch.chatId, locale: ch.locale, payloadText: channelTexts.get(ch.locale)! },
+      {
+        digestKey: key,
+        targetType: "channel",
+        targetId: ch.chatId,
+        locale: ch.locale,
+        payloadText: channelTexts.get(ch.locale)!,
+        // Weekly post gets the site og:image card as a large link preview —
+        // one message instead of photo + text.
+        linkPreviewUrl: isWeekly && siteUrl ? siteLink(ch.locale) : undefined,
+      },
       db,
     ) ? 1 : 0;
   }
@@ -149,7 +159,14 @@ export async function jobDigest(kind: DigestKind): Promise<void> {
     }
     const loc = user.locale;
     enqueued += enqueueDelivery(
-      { digestKey: key, targetType: "dm", targetId: String(user.tg_user_id), locale: loc, payloadText: userTexts.get(loc) ?? userTexts.get(fb)! },
+      {
+        digestKey: key,
+        targetType: "dm",
+        targetId: String(user.tg_user_id),
+        locale: loc,
+        payloadText: userTexts.get(loc) ?? userTexts.get(fb)!,
+        linkPreviewUrl: isWeekly && siteUrl ? siteLink(loc) : undefined,
+      },
       db,
     ) ? 1 : 0;
   }
@@ -237,6 +254,8 @@ export async function jobCustomDigests(): Promise<void> {
         targetId: String(user.tg_user_id),
         locale: loc,
         payloadText: texts.get(`${loc}:${kind}`) ?? renderFor(kind, fb, key),
+        linkPreviewUrl:
+          kind === "weekly" && siteUrl ? `${siteUrl}${loc === fb ? "" : `/${loc}`}` : undefined,
       },
       db,
     ) ? 1 : 0;

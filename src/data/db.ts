@@ -192,6 +192,15 @@ const MIGRATIONS: Migration[] = [
       ) WITHOUT ROWID;
     `,
   },
+  {
+    id: "0005_delivery_link_preview",
+    sql: `
+      -- Optional link-preview URL for a delivery (weekly digest → site page
+      -- whose og:image is the card PNG). NULL = preview disabled, same as
+      -- before — keeps single-message text posts for everything else.
+      ALTER TABLE deliveries ADD COLUMN link_preview_url TEXT;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

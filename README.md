@@ -136,8 +136,10 @@ The Actions runner is the **single publishing environment** — the VPS must
 not set `TG_CHANNEL_*`, `SYNDICATION_ENABLED` or `CARD_ENABLED`, or posts
 double (each environment has its own SQLite, so dedup can't catch it).
 
-- **Weekly PNG card** — `CARD_ENABLED=true` sends a 1200×630 card before
-  the weekly text digest (photo-first, dedup via `card_sent_keys`).
+- **Weekly card** — when `SITE_URL` is set, the weekly text post gets the
+  site's `card.png` og:image as a large link preview (single message).
+  Without `SITE_URL`, `CARD_ENABLED=true` sends the 1200×630 PNG as a
+  photo before the text (dedup via `card_sent_keys`).
 - **GitHub Pages** — the `pages` job renders `site/` (localized dashboard,
   `data.{loc}.json`, Atom feeds, Mini App) and deploys it. Set the Pages
   source to "GitHub Actions" once in repo settings, and add the
