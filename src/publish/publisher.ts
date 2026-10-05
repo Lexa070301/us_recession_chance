@@ -2,6 +2,7 @@ import type Database from "better-sqlite3";
 import { getConfig, getSignalDef } from "../config/load.js";
 import { getDb } from "../data/db.js";
 import {
+  claimDelivery,
   enqueueDelivery,
   markFailed,
   markSent,
@@ -156,6 +157,9 @@ export async function processDeliveries(conn?: Database.Database): Promise<{ sen
   let failed = 0;
 
   for (const d of queue) {
+    // Claim before sending: another processor (the */15 retry cron firing
+    // on the same tick as a digest job) must not see this row as pending.
+    if (!claimDelivery(d.id, db)) continue;
     try {
       if (!d.payload_text) throw new Error("empty payload_text");
       await sendTelegramMessage(d.target_id, d.payload_text, d.link_preview_url ?? undefined);

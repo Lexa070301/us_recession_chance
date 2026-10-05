@@ -8,12 +8,14 @@ export interface DeliveryRow {
   target_type: "channel" | "dm";
   target_id: string;
   locale: string;
-  status: "pending" | "sent" | "failed";
+  status: "pending" | "sending" | "sent" | "failed";
   attempts: number;
   payload_text: string | null;
   link_preview_url: string | null;
   /** Quiet-hours deferral: NULL or a UTC datetime the row waits for. */
   not_before: string | null;
+  /** Claim stamp: set while a processor holds the row mid-send. */
+  claimed_at: string | null;
 }
 
 /**
@@ -49,6 +51,28 @@ export function enqueueDelivery(
   return res.changes ? Number(res.lastInsertRowid) : 0;
 }
 
+/**
+ * Atomically claim a queued row for sending. Returns false when another
+ * processor already holds or finished it — concurrent processDeliveries
+ * calls (digest job + 15-min retry cron on the same tick) can no longer
+ * double-send the same row.
+ */
+export function claimDelivery(id: number, conn?: Database.Database): boolean {
+  const db = conn ?? getDb();
+  return (
+    db
+      .prepare(
+        `UPDATE deliveries SET status = 'sending', claimed_at = datetime('now')
+         WHERE id = ? AND (
+           status IN ('pending', 'failed')
+           -- a claim held >15 min means the holder crashed mid-send
+           OR (status = 'sending' AND claimed_at <= datetime('now', '-15 minutes'))
+         )`,
+      )
+      .run(id).changes === 1
+  );
+}
+
 export function markSent(id: number, conn?: Database.Database): void {
   const db = conn ?? getDb();
   db.prepare("UPDATE deliveries SET status = 'sent', sent_at = datetime('now') WHERE id = ?").run(id);
@@ -75,7 +99,10 @@ export function retryableDeliveries(maxAttempts = 5, limit = 50, conn?: Database
   const db = conn ?? getDb();
   return db
     .prepare(
-      `SELECT * FROM deliveries WHERE status = 'failed' AND attempts < ?
+      `SELECT * FROM deliveries WHERE
+         (status = 'failed' AND attempts < ?
+          -- crash mid-send: reclaim claims older than 15 min
+          OR (status = 'sending' AND claimed_at <= datetime('now', '-15 minutes')))
        AND (not_before IS NULL OR not_before <= datetime('now')) ORDER BY id LIMIT ?`,
     )
     .all(maxAttempts, limit) as DeliveryRow[];

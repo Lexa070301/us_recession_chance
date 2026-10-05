@@ -2,6 +2,20 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (fix: digest double-send race)
+
+A user got the same daily digest twice at the same minute. Root cause:
+`processDeliveries` did SELECT pending → send → markSent, and two
+invocations overlap whenever a digest job and the 15-min `deliveries`
+retry cron fire on the same tick (custom digest_time users land on
+\*/15 boundaries) — both read the row as pending before either marks it
+sent, so both send. Channels escaped only by timing luck.
+
+Fix: claim-before-send — `claimDelivery()` atomically flips a row to
+`sending` (migration 0008 adds `claimed_at`); a concurrent processor
+sees the claim and skips. Stale claims (>15 min, crash mid-send) fall
+back into the retry pool and are re-claimable.
+
 ## 2026-10-05 (fact-of-the-week syndication + fact audit)
 
 Weekly evergreen posts to external venues — the glossary/episode fact

@@ -222,6 +222,17 @@ const MIGRATIONS: Migration[] = [
       ALTER TABLE user_prefs ADD COLUMN tz_offset INTEGER NOT NULL DEFAULT 0;
     `,
   },
+  {
+    id: "0008_delivery_claim",
+    sql: `
+      -- Claim-before-send: processDeliveries flips rows to 'sending' with a
+      -- claimed_at stamp; a concurrent processor sees the claim and skips,
+      -- which closes the same-minute double-send race (digest job +
+      -- */15 deliveries cron). Stale claims (>15 min, crash mid-send)
+      -- fall back into the retry pool.
+      ALTER TABLE deliveries ADD COLUMN claimed_at TEXT;
+    `,
+  },
 ];
 
 let db: Database.Database | undefined;

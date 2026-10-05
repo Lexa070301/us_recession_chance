@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb, getDb, setDb } from "../src/data/db.js";
-import { enqueueDelivery, pendingDeliveries } from "../src/data/repositories/deliveries.js";
+import {
+  claimDelivery,
+  enqueueDelivery,
+  pendingDeliveries,
+  retryableDeliveries,
+} from "../src/data/repositories/deliveries.js";
 import type { SignalEventRow, SignalState } from "../src/data/repositories/signalState.js";
 import { savePrefs, setUserPlan, upsertUser } from "../src/data/repositories/users.js";
 import { routeCompositeAlerts, routeEvent } from "../src/publish/publisher.js";
@@ -118,5 +123,41 @@ describe("delivery link preview", () => {
       "https://example.github.io/repo",
     );
     expect(out.find((d) => d.target_id === "@ch2")!.link_preview_url).toBeNull();
+  });
+});
+
+describe("delivery claiming (double-send race)", () => {
+  beforeEach(() => {
+    setDb(createTestDb());
+  });
+
+  const enqueue = () =>
+    enqueueDelivery({
+      digestKey: "d:2099-01-01",
+      targetType: "dm",
+      targetId: "7",
+      locale: "en",
+      payloadText: "digest",
+    });
+
+  it("only one processor can claim a pending row", () => {
+    const id = enqueue();
+    expect(claimDelivery(id)).toBe(true);
+    // Second claim (concurrent processDeliveries snapshot) loses.
+    expect(claimDelivery(id)).toBe(false);
+    // Claimed rows no longer appear as pending.
+    expect(pendingDeliveries().find((d) => d.id === id)).toBeUndefined();
+  });
+
+  it("a stale 'sending' claim falls back into the retry pool", () => {
+    const id = enqueue();
+    expect(claimDelivery(id)).toBe(true);
+    expect(retryableDeliveries().find((d) => d.id === id)).toBeUndefined();
+    // Simulate a crashed processor: claim older than the 15-min grace.
+    getDb()
+      .prepare("UPDATE deliveries SET claimed_at = datetime('now', '-16 minutes') WHERE id = ?")
+      .run(id);
+    expect(retryableDeliveries().some((d) => d.id === id)).toBe(true);
+    expect(claimDelivery(id)).toBe(true); // re-claimable
   });
 });
