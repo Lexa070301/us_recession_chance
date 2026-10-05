@@ -50,6 +50,9 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
   const gsc = process.env.GOOGLE_SITE_VERIFICATION
     ? `<meta name="google-site-verification" content="${process.env.GOOGLE_SITE_VERIFICATION}">`
     : "";
+  const yandex = process.env.YANDEX_VERIFICATION
+    ? `<meta name="yandex-verification" content="${process.env.YANDEX_VERIFICATION}">`
+    : "";
   // Week pages may exist in one locale only — hreflang must not point at 404s.
   const weekLocales = auditWeekLocales(locales, db);
 
@@ -60,7 +63,7 @@ export function renderSite(outDir: string, conn?: Database.Database): string[] {
     const feedName = `feed-${loc}.xml`;
     const feedHref = loc === fallback ? feedName : `../${feedName}`;
     const indexOpts: SitePageOpts = {
-      bot, feedHref, siteUrl, locales, fallback, extraHead: gsc,
+      bot, feedHref, siteUrl, locales, fallback, extraHead: `${gsc}${yandex}`,
     };
     const html = indexHtml(data, loc, indexOpts);
     write(`data.${loc}.json`, JSON.stringify(data, null, 2));

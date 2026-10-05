@@ -129,6 +129,7 @@ jobs:
           # (it's rendered into the homepage <meta>), so it's baked here;
           # a repo variable overrides if ever needed.
           GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION || 'SvU4eKVeGkjzP0depns2olmE2Uvi89_TKTTP0S4WMjQ' }}
+          YANDEX_VERIFICATION: ${{ vars.YANDEX_VERIFICATION || '5ac567f2432e3227' }}
         run: npm run site
 
       - name: Upload Pages artifact
