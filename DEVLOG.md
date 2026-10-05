@@ -2,6 +2,37 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (deep fact-check of glossary + episode prose)
+
+Full audit of all 42 glossary articles and 9 episode articles in both
+locales against NBER/FRED/primary-source data and the project's own
+config (`signals.yaml`, `model.yaml`). ~25 fixes applied across
+`en.yaml` + `ru.yaml`, keeping facts mirrored:
+
+- Factual errors: FY1968/69 budget swing was −$25.2B→+$3.2B unified
+  budget (not $5.2B deficit→$10B surplus); NY Fed probit peaked ~71%
+  for the 2023-05 spread vintage (not 77%); 10.8% unemployment was the
+  post-war record only until Apr 2020 (14.7%); the NBER COVID trough
+  call was July 2021, not June 2020; the seasonal-adjustment fact box
+  had the mechanism sign backwards (expected spring decline inflated
+  NSA→SA, not a post-Easter layoff wave); jobs-to-unemployed sat below
+  1 for 2000–18 so "preceded every recession" was meaningless; Mar 2020
+  $75B/day Fed purchases ran Mar 23–31, not Mar 19; peak-2023/24 probit
+  was the highest since the early 1980s (~95% in Dec 1981), not ever.
+- Precision/hedges: 1973–75 deepest _by GDP_; breakevens peaked ~3%
+  (not ~2%); temp help led by ~16 months before 2008; 10Y–2Y inverted
+  briefly in late 1988; ISM 50 ≠ economy-wide recession line (~48.7);
+  2001's 2.7M job losses span the jobless recovery window; base rate
+  ~13% of months vs ~16% twelve-month entry chance are now stated
+  separately; GDPNow "matches or beats" consensus rather than "routinely
+  beats"; Sahm 2024 flagged as the clearest _modern_ wrinkle (1959/1969
+  already in `signals.yaml` history).
+- Consistency: signal count stated as 18 weighted (21 defined incl.
+  3 nowcast) everywhere; claims consistently framed as borderline
+  leading/coincident; 10Y–2Y consistently "earlier but noisier" than
+  10Y–3M; unified the 6.9M week-of-Mar-28 claims figure.
+- `payrolls` fact updated for the −911K preliminary 2025 benchmark.
+
 ## 2026-10-05 (fix: digest double-send race)
 
 A user got the same daily digest twice at the same minute. Root cause:
