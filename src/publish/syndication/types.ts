@@ -2,9 +2,9 @@
 import type Database from "better-sqlite3";
 
 export interface ExternalPost {
-  /** Dedup key: d:YYYY-MM-DD · w:YYYY-Www · a:YYYY-Www (self-audit). */
+  /** Dedup key: d:YYYY-MM-DD · w:YYYY-Www · a:YYYY-Www · f:<slug> (fact). */
   key: string;
-  kind: "daily" | "weekly" | "self_audit";
+  kind: "daily" | "weekly" | "self_audit" | "fact";
   locale: string;
   /** First line — used as page/post title where supported. */
   title: string;

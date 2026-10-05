@@ -2,6 +2,30 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-05 (fact-of-the-week syndication + fact audit)
+
+Weekly evergreen posts to external venues — the glossary/episode fact
+boxes are too good to sit only on the site:
+
+- New `ExternalPost.kind = "fact"`; enabled on Buffer (X/Threads/
+  LinkedIn), Bluesky, Mastodon, Discord, Reddit. Telegraph skipped —
+  a whole page per fact is thin content.
+- `jobFactOfWeek` runs after the weekly digest + self-audit (GHA
+  publishing env only, `SYNDICATION_ENABLED` gate). Collects `> **Fact:**`
+  boxes from glossary + episode locale bodies in canonical order;
+  rotation tracked via a pseudo-venue row in `syndications` — each fact
+  posts once (~1 year of weekly backlog), a fully failed run retries
+  the same fact next week.
+- Localized `fact.title` (en/ru); short/medium variants for X (280)
+  and Threads/Mastodon (500).
+- Fact audit: fixed 10 factual errors across the fact boxes (en+ru) —
+  e.g. 2007–09 _surpassed_ 1973–75 (18 vs 16 months, not tied); the
+  1980 recession isn't the shortest post-war (COVID was 2 months);
+  NBER's COVID trough call took 15 months, not "fastest on record";
+  NFCI is a dynamic factor model, not a Kalman filter; 34 cycles
+  since 1854 (not 1857); temp help rolled ~a year before both 2001
+  and 2008 (not 6m/12m split).
+
 ## 2026-10-05 (glossary wiki: 8 → 43 terms, clustered + cross-linked)
 
 Glossary grew into a topical mini-wiki — all in-niche (recession

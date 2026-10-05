@@ -16,7 +16,7 @@ const LIMIT = 2000;
 
 export const discordVenue: Venue = {
   key: "discord",
-  kinds: ["daily", "weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit", "fact"],
   enabled() {
     return !!process.env.DISCORD_WEBHOOK_URL;
   },

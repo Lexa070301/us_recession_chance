@@ -43,7 +43,7 @@ function linkFacets(text: string): unknown[] {
 
 export const blueskyVenue: Venue = {
   key: "bluesky",
-  kinds: ["daily", "weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit", "fact"],
   enabled() {
     return !!(process.env.BSKY_HANDLE && process.env.BSKY_APP_PASSWORD);
   },

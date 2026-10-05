@@ -16,7 +16,7 @@ const LIMIT = 500;
 
 export const mastodonVenue: Venue = {
   key: "mastodon",
-  kinds: ["daily", "weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit", "fact"],
   enabled() {
     return !!(process.env.MASTODON_INSTANCE && process.env.MASTODON_TOKEN);
   },

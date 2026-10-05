@@ -41,7 +41,7 @@ async function redditToken(): Promise<string> {
 
 export const redditVenue: Venue = {
   key: "reddit",
-  kinds: ["daily", "weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit", "fact"],
   enabled() {
     return !!(
       process.env.REDDIT_CLIENT_ID &&

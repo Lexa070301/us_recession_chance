@@ -83,7 +83,7 @@ async function createPost(apiKey: string, channelId: string, text: string): Prom
 
 export const bufferVenue: Venue = {
   key: "buffer",
-  kinds: ["daily", "weekly", "self_audit"],
+  kinds: ["daily", "weekly", "self_audit", "fact"],
   enabled() {
     return !!(process.env.BUFFER_API_KEY && channels().length);
   },

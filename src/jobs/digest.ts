@@ -304,5 +304,9 @@ export async function jobDigestAuto(opts?: { weekly?: "auto" | "force" }): Promi
     // double-posts (PLAN2 §6).
     const { jobSelfAudit } = await import("./selfAudit.js");
     await jobSelfAudit();
+    // Weekly "fact of the week" to external venues — internally gated to
+    // the publication environment, same as self-audit.
+    const { jobFactOfWeek } = await import("./facts.js");
+    await jobFactOfWeek();
   }
 }

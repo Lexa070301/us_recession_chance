@@ -148,7 +148,7 @@ site:
         NBER analysis splits the episode in two. From November 1973 to autumn 1974 the economy shrank moderately — mostly a supply-constraint story, with gasoline queues and materials shortages throttling output. After October 1974 demand itself collapsed: industrial production, employment, and real income all broke down together, and unemployment raced to 9% by May 1975.
         ## The signal record
         Housing indicators warned earliest — starts and permits rolled over in 1973, well before the NBER peak. The yield curve had inverted in 1973, and claims accelerated through 1974. Notably, this is the episode that created the word every forecaster fears: stagflation — prices rising even as output fell, breaking the simple Phillips-curve logic.
-        > **Fact:** The S&P 500 lost 48% peak-to-trough (Jan 1973 – Oct 1974), its worst decline since the Great Depression. The recession lasted 16 months — the longest post-war contraction until 2007–09 tied it.
+        > **Fact:** The S&P 500 lost 48% peak-to-trough (Jan 1973 – Oct 1974), its worst decline since the Great Depression. The recession lasted 16 months — the longest post-war contraction until 2007–09 surpassed it at 18.
     r1980:
       title: "The 1980 Recession"
       body: |
@@ -157,7 +157,7 @@ site:
         Consumers responded faster than anyone expected: credit card spending froze almost overnight. Manufacturing shed 1.1 million jobs in months, autos lost a third of their workforce, and housing froze. Yet the recession lasted just six months — once controls were lifted in July, pent-up demand snapped back so quickly that the recovery barely looks like one on charts.
         ## Why it matters for signals
         Financial and credit signals dominated: the curve inverted deeply through 1979, credit conditions tightened on their own before the controls, and housing led the decline by months. Labor signals confirmed late — unemployment peaked at 7.8% in July 1980, essentially at the trough itself, a reminder that the Sahm-style signals timestamp onset, not forecast.
-        > **Fact:** The 1980 downturn is the shortest peacetime recession on the modern NBER list — six months. It is also the only one partly caused by a credit freeze the government requested on purpose.
+        > **Fact:** The 1980 downturn lasted six months — the shortest post-war recession until COVID's two-month contraction in 2020. It is also the only one partly caused by a credit freeze the government requested on purpose.
     r1981:
       title: "The 1981–82 Recession"
       body: |
@@ -294,7 +294,7 @@ glossary:
       The popular 'two consecutive quarters of negative GDP' shorthand is a rule of thumb, not the definition. The committee weighs a basket of monthly indicators — employment, real personal income, industrial production, wholesale-retail sales, real manufacturing-and-trade sales — looking for a decline that is significant, persistent, and broad-based across the economy.
       ## Why the calls are late
       Official announcements arrive 4–21 months after the fact: the committee prefers accuracy over speed, waiting for revisions and for the trend to become unambiguous. The 2020 recession was declared in June 2020 — already over by then (it ended in April). This inherent delay is precisely why real-time signal monitoring exists: by the time NBER speaks, the episode is usually history.
-      > **Fact:** The committee met in July 2021 to date the COVID trough — the fastest trough call on record. The 1980 recession's peak was announced in June of that year, just five months in — unusually fast, because the decline was already unmistakable.
+      > **Fact:** The committee took fifteen months to call the COVID trough (announced July 2021 for an April 2020 trough). The 1980 recession's peak was announced in June of that year, just five months in — unusually fast, because the decline was already unmistakable.
   credit_spread:
     title: "Credit spreads"
     desc: "The premium corporate borrowers pay over Treasuries — the market's stress thermometer."
@@ -314,7 +314,7 @@ glossary:
       Positive values mean tighter-than-average conditions: wider spreads, tighter credit, higher volatility. Negative values mean looser than average. Sustained positive readings have accompanied every credit-driven downturn in the sample — the index crossed into persistent positive territory in 2007, spiked violently in 2008, and briefly surged in March 2020.
       ## Why it matters
       Credit is the transmission channel between financial markets and the real economy — when financial conditions tighten, borrowing, hiring, and investment follow with a lag. The NFCI captures that channel earlier and more comprehensively than any single spread, which is why it sits near the top of this monitor's financial block.
-      > **Fact:** The index is computed with a Kalman-style filter that weights indicators by their correlation with the overall state — volatile series automatically contribute less, which keeps the NFCI readable through noisy weeks.
+      > **Fact:** The index is a dynamic factor model — indicator weights reflect their correlation with overall financial conditions, so volatile series contribute less, which keeps the NFCI readable through noisy weeks.
   leading_vs_coincident:
     title: "Leading vs coincident signals"
     desc: "The difference between forecasting a recession and detecting one already underway."
@@ -354,7 +354,7 @@ glossary:
       Cycles have no fixed length: US expansions have lasted from 12 months (1981–82) to 128 months (2009–2020). What recurs is the *sequence* — credit tightens, leading indicators roll over, activity contracts, policy eases, recovery begins. The timing varies; the mechanics rhyme.
       ## Why it matters here
       Every signal on this site maps to a phase transition in the cycle: the yield curve and housing permits sense the approaching peak; claims and the Sahm rule confirm the contraction; spreads widening mark the credit stress that usually accompanies it.
-      > **Fact:** The NBER has dated 34 complete US business cycles since 1857. The average expansion since WWII lasts about 65 months; the average recession about 11.
+      > **Fact:** The NBER has dated 34 complete US business cycles since 1854. The average expansion since WWII lasts about 65 months; the average recession about 11.
   soft_landing:
     title: "Soft landing"
     desc: "When the Fed slows inflation without triggering a recession — the rarest outcome in the playbook."
@@ -374,7 +374,7 @@ glossary:
       Double dips usually trace back to policy or unfinished shocks. In 1980–81, Volcker's Fed eased when inflation dipped, saw it rebound, and slammed rates back up — the second recession was the price of crushing inflation that the first recession failed to finish.
       ## Why it matters for signals
       Double dips confound signal interpretation: indicators can stay elevated through the 'recovery' or re-fire after briefly clearing. This site lists 1980 and 1981–82 as separate episodes — matching NBER's treatment — so the signal record shows both dips independently.
-      > **Fact:** NBER counts 1980 and 1981–82 as two recessions, but most economists treat 1980–82 as one long crisis — the 'recovery' year never restored prior employment or output peaks.
+      > **Fact:** NBER counts 1980 and 1981–82 as two recessions, but most economists treat 1980–82 as one long crisis — the 'recovery' year barely restored prior employment and output peaks.
   growth_recession:
     title: "Growth recession"
     desc: "Below-trend growth without an outright contraction — the gray zone between expansion and recession."
@@ -464,7 +464,7 @@ glossary:
       Junk issuers fail first when the economy turns, so HY spreads reprice earliest and most violently — typically jumping from ~3% to 8–10%+ in recessions. Equity can shrug off stress for months; credit cannot — refinancing is existential for leveraged issuers.
       ## On this monitor
       The HY OAS signal fires when the spread crosses its threshold — a widening credit-risk premium that has preceded or accompanied every modern downturn, including the 2015–16 oil bust that didn't become a recession (the honest kind of false positive a credit signal should occasionally produce).
-      > **Fact:** In October 2008 HY spreads spiked past 20% — pricing a depression-scale default wave. Actual realized defaults peaked near 14% — even distressed credit overshot reality at the panic's depth.
+      > **Fact:** In late 2008 HY spreads spiked past 20% — pricing a depression-scale default wave. Actual realized defaults peaked near 15% in 2009 — even distressed credit overshot reality at the panic's depth.
   credit_crunch:
     title: "Credit crunch"
     desc: "When banks stop lending — the supply-side collapse that turns slowdowns into recessions."
@@ -484,7 +484,7 @@ glossary:
       Banks tighten standards *before* loan volumes fall: standards shift with the outlook, volumes follow months later when credit actually dries up. SLOOS tightening waves preceded the 1990, 2001, 2008, and 2020 recessions — and the 2023 tightening that famously didn't produce one.
       ## Strengths and blind spots
       The survey captures intent — supply-side restriction that aggregates poorly into any market price. Its blind spot is that it's self-reported and qualitative; strong tightening readings resolved into recessions in some cycles (2008) and into nothing in others (2023), which is why it shares the credit block with market-priced signals.
-      > **Fact:** SLOOS has run since 1967 — making it one of the oldest continuous soft-data series in US macro, and one of the few that survived relevance-testing through five recessions.
+      > **Fact:** SLOOS has run since 1967 — making it one of the oldest continuous soft-data series in US macro, and one that has now survived relevance-testing through eight recessions.
   liquidity:
     title: "Liquidity"
     desc: "Whether markets can absorb trades without breaking — the invisible variable behind spreads and stress."
@@ -544,7 +544,7 @@ glossary:
       Temps are procyclical by construction — they're the buffer firms build precisely to absorb downturns. Temp employment has peaked and turned down before every recession since 1990, typically by 6–12 months: demand weakens → temps go first → permanent layoffs follow only when the weakness proves durable.
       ## On this monitor
       The temp-help decline signal tracks sustained year-over-year contraction in the series — persistent enough to indicate real labor-market softening, not noise. It's one of the quieter signals on the panel but one of the earliest: by the time payrolls turn, temps have been falling for quarters.
-      > **Fact:** Temp help fell for six straight months before the 2001 recession's start and twelve months before 2008's — the longest advance notice any labor series gives.
+      > **Fact:** Temp help rolled over roughly a year before both the 2001 and 2008 recessions began — the longest advance notice any labor series gives.
   industrial_production:
     title: "Industrial production"
     desc: "Manufacturing, mining, and utilities output — the real-economy pulse behind half the activity signals."
@@ -604,7 +604,7 @@ glossary:
       PCE weights adjust dynamically — it captures substitution (buying chicken when beef spikes) that fixed-basket CPI misses. It's also broader: healthcare paid by employers and government counts in PCE but not CPI. The Fed's 2% target is in PCE terms; headline CPI typically runs ~0.3–0.4pp hotter.
       ## Why it matters for signals
       Inflation drives the policy response — the rate path that inverts curves and cracks housing. The 2021–22 episode showed why composition matters: headline CPI hit 9% on energy and goods while core PCE ran cooler; the Fed's tightening decision tracked the core measure, and so did the recession risk that followed.
-      > **Fact:** TIPS breakevens — the inflation implied by bond prices — matched PCE almost exactly through 2021–22 even while CPI overshot: bond markets were pricing the Fed's measure, not the headline.
+      > **Fact:** Through 2021–22, TIPS breakevens stayed near the Fed's 2% target even while CPI overshot to 9% — bond markets were pricing a return to target, not the current headline.
   core_inflation:
     title: "Core vs headline inflation"
     desc: "Stripping food and energy — why the 'boring' inflation number is the one that drives policy."
@@ -731,6 +731,9 @@ composite:
   threshold_alert: "📊 Score {{score}} — crossed your alert threshold {{threshold}}"
   bucket_up: "🚨 Risk band: {{from}} → {{to}}"
   bucket_down: "✅ Risk band eased: {{from}} → {{to}}"
+
+fact:
+  title: "📉 Fact of the week: {{name}}"
 
 audit:
   title: "🔍 Self-audit — {{week}}"
