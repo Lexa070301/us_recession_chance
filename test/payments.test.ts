@@ -82,9 +82,9 @@ describe("invoice payload & tiers", () => {
   });
 
   it("resolves configured tiers only", () => {
-    expect(findTier(30)?.stars).toBe(150);
-    expect(findTier(90)?.stars).toBe(350);
-    expect(findTier(365)?.stars).toBe(1200);
+    expect(findTier(30)?.stars).toBe(250);
+    expect(findTier(90)?.stars).toBe(500);
+    expect(findTier(365)?.stars).toBe(1000);
     expect(findTier(31)).toBeUndefined(); // unlisted period → reject
   });
 });

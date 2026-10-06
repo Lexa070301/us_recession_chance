@@ -43,10 +43,10 @@ plans:
 
 subscription:
   refund_window_days: 7 # full self-service refund via /paysupport within this window
-  tiers: # price in Telegram Stars (XTR); longer = discounted
-    - { days: 30, stars: 150 }
-    - { days: 90, stars: 350 } # -22% vs 30d rate
-    - { days: 365, stars: 1200 } # -33% vs 30d rate
+  tiers: # price in Telegram Stars (XTR); each matches a visible top-up pack
+    - { days: 30, stars: 250 }
+    - { days: 90, stars: 500 } # -33% vs 30d rate
+    - { days: 365, stars: 1000 } # -67% vs 30d rate
 
 # Pooled 12m-entry logit, fitted by `npm run fit-model` on 1983–2025
 # (McFadden R² ≈ 0.39, in-sample; recession & ≤12m post-recession months

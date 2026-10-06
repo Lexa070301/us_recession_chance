@@ -2,6 +2,15 @@
 
 Chronological development log. Newest entries at the top.
 
+## 2026-10-06 (subscription tiers aligned to Stars top-up packs)
+
+Repriced Plus tiers to 250⭐/30d, 500⭐/90d (−33%), 1000⭐/365d (−67%).
+Each price now equals one pack in the default top-up list
+(250/500/1000) — previously 150/350/1200 all fell between packs, so
+buyers either overshot (150 → 250 pack) or had to expand "More
+Options". The deep annual discount is intentional: 1000⭐ is both the
+cheapest visible pack covering a year and a strong anchor vs 250/mo.
+
 ## 2026-10-05 (deep fact-check of glossary + episode prose)
 
 Full audit of all 42 glossary articles and 9 episode articles in both
