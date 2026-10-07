@@ -784,7 +784,7 @@ digest:
   events: "⚡ Изменения:"
   events_weekly: "⚡ За неделю:"
   active_compact: "▸ Активные ({{count}}): {{list}}"
-  bot_promo: "🤖 @{{bot}} — мгновенные алерты, свои пороги скора, nowcast-сигналы и аналитика (Plus)"
+  bot_promo: "🤖 Telegram-бот @{{bot}} — мгновенные алерты, свои пороги скора, nowcast-сигналы и аналитика (Plus)"
 
 analytics:
   title: "📈 Аналитика сигналов — состояние · значение · точность"

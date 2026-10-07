@@ -782,7 +782,7 @@ digest:
   events: "⚡ Changes:"
   events_weekly: "⚡ This week:"
   active_compact: "▸ Active ({{count}}): {{list}}"
-  bot_promo: "🤖 @{{bot}} — instant alerts, custom score thresholds, nowcast signals & per-signal analytics (Plus)"
+  bot_promo: "🤖 Telegram bot @{{bot}} — instant alerts, custom score thresholds, nowcast signals & per-signal analytics (Plus)"
 
 analytics:
   title: "📈 Signal analytics — state · value · hit rate"
